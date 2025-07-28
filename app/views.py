@@ -37,4 +37,4 @@ def addDepinfo():
     db.session.add(try1)
     db.session.commit()
 
-    return "添加信息成功"
+    return "添加修改成功"
