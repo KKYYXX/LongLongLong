@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限测试页面</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+        }
+        
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .permissions-list {
+            margin-top: 15px;
+        }
+        
+        .permission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .permission-item:last-child {
+            border-bottom: none;
+        }
+        
+        .permission-name {
+            font-weight: bold;
+        }
+        
+        .permission-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .permission-status.granted {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .permission-status.denied {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>权限测试页面</h1>
+            <p>测试用户权限检查功能</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="wxOpenid">微信OpenID:</label>
+            <input type="text" id="wxOpenid" placeholder="请输入微信OpenID" value="1edd">
+        </div>
+        
+        <div class="form-group">
+            <button class="btn" onclick="checkZcAlterPermission()">检查zc_alter权限</button>
+            <button class="btn" onclick="getAllPermissions()">获取所有权限</button>
+            <button class="btn btn-success" onclick="goToZcAlter()">进入zc_alter页面</button>
+        </div>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <!-- 引入权限检查工具 -->
+    <script src="/app/static/js/permission.js"></script>
+    
+    <script>
+        // 检查zc_alter权限
+        async function checkZcAlterPermission() {
+            const wxOpenid = document.getElementById('wxOpenid').value.trim();
+            
+            if (!wxOpenid) {
+                showResult('请输入微信OpenID', 'error');
+                return;
+            }
+            
+            const result = await permissionChecker.checkZcAlterPermission(wxOpenid);
+            showResult(result, result.success ? 'success' : 'error');
+        }
+        
+        // 获取所有权限
+        async function getAllPermissions() {
+            const wxOpenid = document.getElementById('wxOpenid').value.trim();
+            
+            if (!wxOpenid) {
+                showResult('请输入微信OpenID', 'error');
+                return;
+            }
+            
+            const result = await permissionChecker.getUserPermissions(wxOpenid);
+            showResult(result, result.success ? 'success' : 'error');
+        }
+        
+        // 进入zc_alter页面
+        function goToZcAlter() {
+            const wxOpenid = document.getElementById('wxOpenid').value.trim();
+            
+            if (!wxOpenid) {
+                showResult('请输入微信OpenID', 'error');
+                return;
+            }
+            
+            // 先检查权限，然后跳转
+            permissionChecker.controlZcAlterAccess(
+                wxOpenid,
+                // 权限验证成功
+                function(result) {
+                    window.location.href = `/app/zc_alter?wx_openid=${wxOpenid}`;
+                },
+                // 权限被拒绝
+                function(result) {
+                    showResult(result, 'error');
+                }
+            );
+        }
+        
+        // 显示结果
+        function showResult(data, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            
+            if (typeof data === 'string') {
+                resultDiv.innerHTML = data;
+            } else {
+                let html = `<strong>${data.message}</strong>`;
+                
+                if (data.success) {
+                    if (data.has_permission !== undefined) {
+                        html += `<br>zc_alter权限: <span class="permission-status ${data.has_permission ? 'granted' : 'denied'}">${data.has_permission ? '已授权' : '未授权'}</span>`;
+                    }
+                    
+                    if (data.user_name) {
+                        html += `<br>用户名: ${data.user_name}`;
+                    }
+                    
+                    if (data.permissions) {
+                        html += '<div class="permissions-list"><strong>所有权限:</strong>';
+                        Object.entries(data.permissions).forEach(([key, value]) => {
+                            html += `<div class="permission-item">
+                                <span class="permission-name">${key}:</span>
+                                <span class="permission-status ${value ? 'granted' : 'denied'}">${value ? '已授权' : '未授权'}</span>
+                            </div>`;
+                        });
+                        html += '</div>';
+                    }
+                }
+                
+                resultDiv.innerHTML = html;
+            }
+            
+            resultDiv.style.display = 'block';
+        }
+        
+        // 页面加载时设置默认值
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从URL参数获取wx_openid
+            const urlParams = new URLSearchParams(window.location.search);
+            const wxOpenid = urlParams.get('wx_openid');
+            if (wxOpenid) {
+                document.getElementById('wxOpenid').value = wxOpenid;
+            }
+        });
+    </script>
+</body>
+</html> 
