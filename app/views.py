@@ -25,16 +25,3 @@ def addDepinfo():
     db.session.commit()
 
     return "添加信息成功"
-
-#记录修改
-@blue.route('/dept/add',methods=['POST'])
-def addDepinfo():
-
-    try1 = (TryModel(
-    name = request.args.get('name'),
-    id =request.args.get('id')
-    ))
-    db.session.add(try1)
-    db.session.commit()
-
-    return "添加修改成功"
