@@ -1,6 +1,16 @@
 
 from app.plugins import db
 from datetime import datetime
+from sqlalchemy import TypeDecorator, Integer
+
+# 自定义 UNSIGNED 整数类型
+class UnsignedInteger(TypeDecorator):
+    impl = Integer
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'mysql':
+            return dialect.type_descriptor(Integer(unsigned=True))
+        return dialect.type_descriptor(Integer)
 
 #创建模型
 
@@ -9,6 +19,7 @@ class Projects15(db.Model):
     "双百行动"校地合作共建项目清单(2025年) 模型
     """
     __tablename__ = '15projects'
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='项目唯一标识')
     serial_number = db.Column(db.Numeric(10, 0), comment='项目序号')
@@ -45,16 +56,18 @@ class UserModel(db.Model):
     小程序用户账户表模型
     """
     __tablename__ = 'users'
+    __table_args__ = {'extend_existing': True}
 
     name = db.Column(db.String(50), nullable=False, comment='用户真实姓名')
     phone = db.Column(db.String(20), primary_key=True, unique=True, comment='用户手机号（唯一）')
     password = db.Column(db.String(255), nullable=False, comment='加密后的用户密码')
     wx_openid = db.Column(db.String(128), comment='微信openid')
-    principal = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
-    alter_15 = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
-    query_15 = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
-    alter_zc = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
-    alter_model = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
+    principal = db.Column(db.Boolean, nullable=True, comment='1表true，0表false，默认为0')
+    alter_15 = db.Column('15alter', db.Boolean, nullable=True, comment='1表true，0表false，默认为0')
+    query_15 = db.Column('15query', db.Boolean, nullable=True, comment='1表true，0表false，默认为0')
+    alter_zc = db.Column('zcalter', db.Boolean, nullable=True, comment='1表true，0表false，默认为0')
+    alter_model = db.Column('modelalter', db.Boolean, nullable=True, comment='1表true，0表false，默认为0')
+    #alter_model表示典型案例修改
 
     def __repr__(self):
         return f'<User {self.phone}: {self.name}>'
@@ -65,12 +78,13 @@ class UploadModel(db.Model):
     用户上传文件信息表模型
     """
     __tablename__ = 'model'
+    __table_args__ = {'extend_existing': True}
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键ID')
+    id = db.Column(UnsignedInteger, primary_key=True, autoincrement=True, comment='自增主键ID')
     user_id = db.Column(db.String(128), nullable=False, comment='微信用户唯一标识openid')
     file_name = db.Column(db.String(255), nullable=False, comment='用户上传的原始文件名')
     file_type = db.Column(db.Enum('pdf', 'doc', 'docx'), nullable=False, comment='文件类型(pdf/word)')
-    file_size = db.Column(db.Integer, nullable=False, comment='文件大小(单位：字节)')
+    file_size = db.Column(UnsignedInteger, nullable=False, comment='文件大小(单位：字节)')
     file_url = db.Column(db.String(512), nullable=False, comment='完整的文件访问URL地址')
     has_text = db.Column(db.Boolean, nullable=False, default=True, comment='标记文件是否包含文字')
     has_images = db.Column(db.Boolean, nullable=False, default=False, comment='标记文件是否包含图片')
@@ -87,13 +101,14 @@ class ZCDocument(db.Model):
     用户上传文档记录表(PDF/Word)模型
     """
     __tablename__ = 'zc_documents'
+    __table_args__ = {'extend_existing': True}
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='文档唯一标识ID')
+    id = db.Column(UnsignedInteger, primary_key=True, autoincrement=True, comment='文档唯一标识ID')
     user_id = db.Column(db.String(128), nullable=False, comment='微信用户openid')
     file_url = db.Column(db.String(512), nullable=False, comment='文件访问URL')
     file_type = db.Column(db.Enum('pdf', 'doc', 'docx'), nullable=False, comment='文件类型(pdf/word)')
     original_name = db.Column(db.String(255), nullable=False, comment='原始文件名')
-    file_size = db.Column(db.Integer, nullable=False, comment='文件大小(字节)')
+    file_size = db.Column(UnsignedInteger, nullable=False, comment='文件大小(字节)')
     uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, comment='上传时间')
 
     def __repr__(self):
@@ -105,8 +120,9 @@ class TryModel(db.Model):
     测试表 try 的模型
     """
     __tablename__ = 'try'
+    __table_args__ = {'extend_existing': True}
 
-    id = db.Column(db.Integer, primary_key=True, comment='主键ID')
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False, comment='主键ID')
     name = db.Column(db.String(255), comment='名称字段')
 
     def __repr__(self):
@@ -118,8 +134,9 @@ class TryZhigongModel(db.Model):
     测试表 tryzhigong 的模型
     """
     __tablename__ = 'tryzhigong'
+    __table_args__ = {'extend_existing': True}
 
-    id = db.Column(db.Integer, primary_key=True, comment='主键ID')
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False, comment='主键ID')
 
     def __repr__(self):
         return f'<TryZhigongModel {self.id}>'
