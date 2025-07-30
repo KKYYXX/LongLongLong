@@ -108,18 +108,8 @@ class TryModel(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, comment='主键ID')
     name = db.Column(db.String(255), comment='名称字段')
+    gender = db.Column(db.String(255), comment='性别')
 
     def __repr__(self):
         return f'<TryModel {self.id}: {self.name}>'
 
-
-class TryZhigongModel(db.Model):
-    """
-    测试表 tryzhigong 的模型
-    """
-    __tablename__ = 'tryzhigong'
-
-    id = db.Column(db.Integer, primary_key=True, comment='主键ID')
-
-    def __repr__(self):
-        return f'<TryZhigongModel {self.id}>'
