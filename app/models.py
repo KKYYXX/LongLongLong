@@ -76,7 +76,6 @@ class UploadModel(db.Model):
     has_images = db.Column(db.Boolean, nullable=False, default=False, comment='标记文件是否包含图片')
     video_url = db.Column(db.String(512), comment='关联视频文件URL（可选）')
     upload_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, comment='文件上传时间')
-    status = db.Column(db.Enum('pending', 'processed', 'failed'), default='pending', comment='文件处理状态')
 
     def __repr__(self):
         return f'<UploadModel {self.id}: {self.file_name}>'
