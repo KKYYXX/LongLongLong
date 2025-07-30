@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZCDocument 接口测试页面</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+        }
+        
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .documents-list {
+            margin-top: 15px;
+        }
+        
+        .document-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .document-item h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        
+        .document-item p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .document-actions {
+            margin-top: 10px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ZCDocument 接口测试页面</h1>
+            <p>测试 zc_documents 表的增删查功能</p>
+        </div>
+        
+        <!-- 查询所有文档 -->
+        <div class="section">
+            <h3>1. 查询所有文档</h3>
+            <button class="btn" onclick="getAllDocuments()">
+                <span id="queryLoading" class="loading" style="display: none;"></span>
+                查询所有文档
+            </button>
+            <div id="queryResult" class="result" style="display: none;"></div>
+            <div id="documentsList" class="documents-list"></div>
+        </div>
+        
+        <!-- 添加文档 -->
+        <div class="section">
+            <h3>2. 添加文档</h3>
+            <form id="addDocumentForm">
+                <div class="form-group">
+                    <label for="user_id">用户ID (wx_openid):</label>
+                    <input type="text" id="user_id" name="user_id" value="test_user_123" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="file_url">文件URL:</label>
+                    <input type="url" id="file_url" name="file_url" value="https://example.com/files/test.pdf" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="file_type">文件类型:</label>
+                    <select id="file_type" name="file_type" required>
+                        <option value="pdf">PDF</option>
+                        <option value="doc">DOC</option>
+                        <option value="docx">DOCX</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="original_name">原始文件名:</label>
+                    <input type="text" id="original_name" name="original_name" value="测试文档.pdf" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="file_size">文件大小 (字节):</label>
+                    <input type="number" id="file_size" name="file_size" value="1024000" min="1" required>
+                </div>
+                
+                <button type="submit" class="btn btn-success">
+                    <span id="addLoading" class="loading" style="display: none;"></span>
+                    添加文档
+                </button>
+            </form>
+            <div id="addResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <!-- 删除文档 -->
+        <div class="section">
+            <h3>3. 删除文档</h3>
+            <div class="form-group">
+                <label for="delete_id">文档ID:</label>
+                <input type="number" id="delete_id" name="delete_id" placeholder="输入要删除的文档ID" min="1">
+            </div>
+            <button class="btn btn-danger" onclick="deleteDocument()">
+                <span id="deleteLoading" class="loading" style="display: none;"></span>
+                删除文档
+            </button>
+            <div id="deleteResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <!-- 根据用户ID查询 -->
+        <div class="section">
+            <h3>4. 根据用户ID查询文档</h3>
+            <div class="form-group">
+                <label for="search_user_id">用户ID:</label>
+                <input type="text" id="search_user_id" name="search_user_id" value="test_user_123">
+            </div>
+            <button class="btn" onclick="getUserDocuments()">
+                <span id="userQueryLoading" class="loading" style="display: none;"></span>
+                查询用户文档
+            </button>
+            <div id="userQueryResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 查询所有文档
+        async function getAllDocuments() {
+            const loading = document.getElementById('queryLoading');
+            const result = document.getElementById('queryResult');
+            const list = document.getElementById('documentsList');
+            
+            loading.style.display = 'inline-block';
+            result.style.display = 'none';
+            list.innerHTML = '';
+            
+            try {
+                const response = await fetch('/app/api/zcdocuments', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                result.textContent = JSON.stringify(data, null, 2);
+                result.style.display = 'block';
+                
+                if (data.success && data.data.length > 0) {
+                    displayDocumentsList(data.data);
+                }
+            } catch (error) {
+                result.textContent = `请求失败: ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        // 显示文档列表
+        function displayDocumentsList(documents) {
+            const list = document.getElementById('documentsList');
+            list.innerHTML = '<h4>文档列表:</h4>';
+            
+            documents.forEach(doc => {
+                const item = document.createElement('div');
+                item.className = 'document-item';
+                item.innerHTML = `
+                    <h4>${doc.original_name}</h4>
+                    <p><strong>ID:</strong> ${doc.id}</p>
+                    <p><strong>用户ID:</strong> ${doc.user_id}</p>
+                    <p><strong>文件类型:</strong> ${doc.file_type}</p>
+                    <p><strong>文件大小:</strong> ${formatFileSize(doc.file_size)}</p>
+                    <p><strong>上传时间:</strong> ${doc.uploaded_at}</p>
+                    <div class="document-actions">
+                        <button class="btn btn-danger" onclick="deleteDocumentById(${doc.id})">删除</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 2. 添加文档
+        document.getElementById('addDocumentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loading = document.getElementById('addLoading');
+            const result = document.getElementById('addResult');
+            
+            loading.style.display = 'inline-block';
+            result.style.display = 'none';
+            
+            const formData = new FormData(this);
+            const documentData = {
+                user_id: formData.get('user_id'),
+                file_url: formData.get('file_url'),
+                file_type: formData.get('file_type'),
+                original_name: formData.get('original_name'),
+                file_size: parseInt(formData.get('file_size'))
+            };
+            
+            try {
+                const response = await fetch('/app/api/zcdocuments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(documentData)
+                });
+                const data = await response.json();
+                
+                result.textContent = JSON.stringify(data, null, 2);
+                result.style.display = 'block';
+                
+                if (data.success) {
+                    // 清空表单
+                    this.reset();
+                    // 刷新文档列表
+                    setTimeout(() => getAllDocuments(), 1000);
+                }
+            } catch (error) {
+                result.textContent = `请求失败: ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+        
+        // 3. 删除文档
+        async function deleteDocument() {
+            const documentId = document.getElementById('delete_id').value;
+            if (!documentId) {
+                alert('请输入要删除的文档ID');
+                return;
+            }
+            
+            if (!confirm(`确定要删除文档ID为 ${documentId} 的记录吗？`)) {
+                return;
+            }
+            
+            const loading = document.getElementById('deleteLoading');
+            const result = document.getElementById('deleteResult');
+            
+            loading.style.display = 'inline-block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/app/api/zcdocuments/${documentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                result.textContent = JSON.stringify(data, null, 2);
+                result.style.display = 'block';
+                
+                if (data.success) {
+                    // 清空输入框
+                    document.getElementById('delete_id').value = '';
+                    // 刷新文档列表
+                    setTimeout(() => getAllDocuments(), 1000);
+                }
+            } catch (error) {
+                result.textContent = `请求失败: ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        // 根据ID删除文档（从列表中调用）
+        async function deleteDocumentById(documentId) {
+            if (!confirm(`确定要删除文档ID为 ${documentId} 的记录吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/app/api/zcdocuments/${documentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('删除成功！');
+                    // 刷新文档列表
+                    getAllDocuments();
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
+        }
+        
+        // 4. 根据用户ID查询文档
+        async function getUserDocuments() {
+            const userId = document.getElementById('search_user_id').value;
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+            
+            const loading = document.getElementById('userQueryLoading');
+            const result = document.getElementById('userQueryResult');
+            
+            loading.style.display = 'inline-block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/app/api/zcdocuments/user/${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                result.textContent = JSON.stringify(data, null, 2);
+                result.style.display = 'block';
+            } catch (error) {
+                result.textContent = `请求失败: ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        // 页面加载时自动查询所有文档
+        document.addEventListener('DOMContentLoaded', function() {
+            getAllDocuments();
+        });
+    </script>
+</body>
+</html> 
