@@ -55,6 +55,7 @@ class UserModel(db.Model):
     query_15 = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
     alter_zc = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
     alter_model = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
+    alter_progress = db.Column(db.Boolean, default=False, comment='1表true，0表false，默认为0')
 
     def __repr__(self):
         return f'<User {self.phone}: {self.name}>'
@@ -97,6 +98,26 @@ class ZCDocument(db.Model):
 
     def __repr__(self):
         return f'<ZCDocument {self.id}: {self.original_name}>'
+
+
+class ProgressModel(db.Model):
+    """
+    项目进度表 progress 的模型
+    """
+    __tablename__ = 'progress'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键ID')
+    project_name = db.Column(db.String(200), db.ForeignKey('15projects.project_name'), nullable=False, comment='项目名称，关联15projects表')
+    practice_time = db.Column(db.DateTime, nullable=False, comment='实践时间')
+    practice_location = db.Column(db.String(255), nullable=False, comment='实践地点')
+    practice_members = db.Column(db.Text, nullable=False, comment='实践成员，多个成员用换行或逗号分隔')
+    practice_image_url = db.Column(db.String(512), comment='实践图片的URL地址，用于存储图片的链接')
+    news = db.Column(db.String(512), nullable=False, comment='用户上传的新闻链接')
+
+    project = db.relationship('Projects15', backref='progress', foreign_keys=[project_name])
+
+    def __repr__(self):
+        return f'<ProgressModel {self.id}: {self.project_name}>'
 
 
 class TryModel(db.Model):
