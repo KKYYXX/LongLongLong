@@ -11,7 +11,7 @@ def createApp():
     app.register_blueprint(blue,url_prefix='/app')
 
     #app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Xjy20050109@localhost:3306/longmen'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Xjy20050109@localhost:3306/longmen'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:mrh123@localhost:3306/longmen'
 
     initPlugins(app)
 

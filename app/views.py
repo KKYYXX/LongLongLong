@@ -1,17 +1,13 @@
 #放视图
 import os
-
 from flask import Blueprint,request,jsonify,render_template
 from werkzeug.utils import secure_filename
-
 from app.models import TryModel,ZCDocument
 from app.plugins import db
 from sqlalchemy import func
 from datetime import datetime
-from flask import Blueprint, request, jsonify
 from werkzeug.security import check_password_hash
-
-from app.models import TryModel, UserModel, ZCDocument, UploadModel
+from app.models import TryModel, UserModel, ZCDocument, UploadMod
 
 blue = Blueprint('blue',__name__)
 
@@ -146,7 +142,7 @@ def groupdeptdatail():
 
 # ==================== ZCDocument 表接口 ====================
 
-# 1. 查询所有zc_documents数据
+# 1. 查询所有zc_documents数据——联调over
 @blue.route('/api/zcdocuments', methods=['GET'])
 def get_all_zcdocuments():
     """
@@ -161,7 +157,7 @@ def get_all_zcdocuments():
         documents_list = []
         for doc in documents:
             documents_list.append({
-                'user_id': doc.user_id,
+                #'user_id': doc.user_id,
                 'file_url': doc.file_url,
                 'file_type': doc.file_type,
                 'original_name': doc.original_name,
@@ -184,6 +180,7 @@ def get_all_zcdocuments():
         }), 500
 
 
+'''
 # 2. 添加zc_documents数据
 @blue.route('/api/zcdocuments', methods=['POST'])
 def add_zcdocument():
@@ -200,17 +197,17 @@ def add_zcdocument():
         # 获取请求参数
         data = request.get_json() if request.is_json else request.form
 
-        user_id = data.get('user_id')
+        #user_id = data.get('user_id')
         file_url = data.get('file_url')
         file_type = data.get('file_type')
         original_name = data.get('original_name')
         file_size = data.get('file_size')
 
         # 参数验证
-        if not all([user_id, file_url, file_type, original_name, file_size]):
+        if not all([ file_url, file_type, original_name, file_size]):
             return jsonify({
                 'success': False,
-                'message': '缺少必要参数：user_id, file_url, file_type, original_name, file_size'
+                'message': '缺少必要参数：file_url, file_type, original_name, file_size'
             }), 400
 
         # 验证文件类型
@@ -233,7 +230,7 @@ def add_zcdocument():
 
         # 创建新的ZCDocument记录
         new_document = ZCDocument(
-            user_id=user_id,
+           # user_id=user_id,
             file_url=file_url,
             file_type=file_type,
             original_name=original_name,
@@ -250,7 +247,7 @@ def add_zcdocument():
             'message': '添加成功',
             'data': {
                 'id': new_document.id,
-                'user_id': new_document.user_id,
+                #'user_id': new_document.user_id,
                 'file_url': new_document.file_url,
                 'file_type': new_document.file_type,
                 'original_name': new_document.original_name,
@@ -265,7 +262,54 @@ def add_zcdocument():
             'success': False,
             'message': f'添加失败: {str(e)}'
         }), 500
+'''
+import os
 
+
+@blue.route('/api/upload', methods=['POST'])
+def upload_file():
+    """
+    上传文件接口：接收文件本体，保存并返回文件URL
+    """
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({'success': False, 'message': '未提供文件'}), 400
+
+        # 1. 创建保存文件的目录
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+
+        # 2. 安全地获取文件名
+        filename = secure_filename(file.filename)
+
+        # 3. 确保文件名唯一
+        base, ext = os.path.splitext(filename)
+        counter = 1
+        while os.path.exists(os.path.join(upload_dir, filename)):
+            filename = f"{base}_{counter}{ext}"
+            counter += 1
+
+        # 4. 保存文件
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+
+        # 5. 返回可访问的URL
+        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
+
+        return jsonify({
+            'success': True,
+            'message': '上传成功',
+            'file_url': file_url
+        }), 200
+
+    except Exception as e:
+        print(f"文件上传错误: {str(e)}")  # 添加错误日志
+        return jsonify({
+            'success': False,
+            'message': f'上传失败: {str(e)}'
+        }), 500
 
 # 3. 删除zc_documents记录
 @blue.route('/api/zcdocuments/<int:document_id>', methods=['DELETE'])

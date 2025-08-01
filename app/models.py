@@ -68,7 +68,7 @@ class UploadModel(db.Model):
     __tablename__ = 'model'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键ID')
-    user_id = db.Column(db.String(128), nullable=False, comment='微信用户唯一标识openid')
+    #user_id = db.Column(db.String(128), nullable=False, comment='微信用户唯一标识openid')
     file_name = db.Column(db.String(255), nullable=False, comment='用户上传的原始文件名')
     file_type = db.Column(db.Enum('pdf', 'doc', 'docx'), nullable=False, comment='文件类型(pdf/word)')
     file_size = db.Column(db.Integer, nullable=False, comment='文件大小(单位：字节)')
