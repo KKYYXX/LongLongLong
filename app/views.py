@@ -146,15 +146,6 @@ def groupdeptdatail():
 
 # ==================== ZCDocument 表接口 ====================
 
-# 测试页面路由
-@blue.route('/zcdocuments_test', methods=['GET'])
-def zcdocuments_test_page():
-    """
-    渲染ZCDocument测试页面
-    """
-    return render_template('zcdocuments_test.html')
-
-
 # 1. 查询所有zc_documents数据
 @blue.route('/api/zcdocuments', methods=['GET'])
 def get_all_zcdocuments():
