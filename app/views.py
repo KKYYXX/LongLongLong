@@ -417,16 +417,20 @@ def register_user():
     existing_user = UserModel.query.filter_by(phone=phone).first()
 
     if existing_user:
-        # 如果用户已存在，匹配名字和微信号
+        # 检查用户是否为负责人
+        if not existing_user.principal:
+            return jsonify({'message': '该用户非负责人'}), 403
+
+        # 如果用户已存在且是负责人，匹配名字和微信号
         if existing_user.name == name and existing_user.wx_openid == wx_openid:
             # 如果匹配，允许注册（返回用户信息）
             user_info = {
                 'name': existing_user.name,
                 'phone': existing_user.phone,
                 'wx_openid': existing_user.wx_openid,
-                'password': existing_user.password  # Assuming password is already hashed
+                'password': existing_user.password  # 假设密码已经过哈希处理
             }
-            return jsonify(user_info), 200  # Registration successful (user exists and matches)
+            return jsonify(user_info), 200  # 注册成功（用户已存在且信息匹配）
         else:
             # 如果名字和微信号不匹配，注册失败
             return jsonify({'message': 'User details do not match'}), 400
