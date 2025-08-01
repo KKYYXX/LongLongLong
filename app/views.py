@@ -1,5 +1,9 @@
 #放视图
+import os
+
 from flask import Blueprint,request,jsonify,render_template
+from werkzeug.utils import secure_filename
+
 from app.models import TryModel,ZCDocument
 from app.plugins import db
 from sqlalchemy import func
@@ -442,35 +446,35 @@ def register_user():
 #转让页面接口（返回姓名、号码、密码）
 @blue.route('/user/validate', methods=['POST'])
 def validate_user():
-    # 获取请求中的数据
     name = request.form.get('name')
     phone = request.form.get('phone')
     password = request.form.get('password')
+
+    # 打印调试信息（开发时使用，部署前删除）
+    print(f"收到请求：name={name}, phone={phone}, password={password}")
 
     # 查询数据库中是否有该用户
     user = UserModel.query.filter_by(phone=phone).first()
 
     if user:
-        # 如果用户存在，验证姓名和密码
-        if user.name == name and check_password_hash(user.password, password):
-            # 如果姓名和密码匹配，更新principal字段为True
-            user.principal = True
-            db.session.commit()  # 提交更改
-
-            # 返回用户信息
-            user_info = {
-                'name': user.name,
-                'phone': user.phone,
-                'wx_openid': user.wx_openid,
-                'principal': user.principal  # 返回更新后的principal值
-            }
-            return jsonify(user_info), 200  # 匹配成功，返回用户信息
+        print(f"数据库用户：name={user.name}, phone={user.phone}, password={user.password}, principal={user.principal}")
+        if user.name == name and user.password == password:
+            if user.principal:
+                user_info = {
+                    'name': user.name,
+                    'phone': user.phone,
+                    'wx_openid': user.wx_openid,
+                    'principal': user.principal
+                }
+                return jsonify(user_info), 200
+            else:
+                return jsonify({'message': '该用户不是负责人，无法转让'}), 403
         else:
-            # 如果姓名或密码不匹配，返回失败信息
             return jsonify({'message': '姓名或密码错误'}), 400
     else:
-        # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
+
+
 
 #15项清单的查询权限人员（返回所有query_15为True的姓名和号码）
 @blue.route('/user/query_15', methods=['GET'])
@@ -489,7 +493,7 @@ def get_users_query_15():
     return jsonify(result), 200  # 返回查询结果
 
 #15项清单查询权限人员的添加（返回所有query_15为True的姓名和号码）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/query_15_add', methods=['POST'])
 def add_user_query_15():
     # 获取请求中的数据
     name = request.form.get('name')
@@ -518,7 +522,7 @@ def add_user_query_15():
         return jsonify({'message': '用户不存在'}), 404
 
 #15项清单查询权限人员的删除（返回所有query_15为True的姓名和号码）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/query_15_delete', methods=['POST'])
 def delete_user_query_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -528,8 +532,8 @@ def delete_user_query_15():
     if user:
         # 如果用户存在，检查query_15是否为True
         if user.query_15:
-            # 如果query_15为True，删除该用户
-            db.session.delete(user)
+            # 如果query_15为True，将query_15改为False
+            user.query_15 = False
             db.session.commit()  # 提交删除操作
             # 返回所有query_15为True的用户信息
             users = UserModel.query.filter_by(query_15=True).all()
@@ -542,7 +546,7 @@ def delete_user_query_15():
             return jsonify(result), 200  # 删除成功，返回所有query_15为True的用户信息
         else:
             # 如果query_15为False，无法删除
-            return jsonify({'message': '该用户无法删除，query_15为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -564,7 +568,7 @@ def get_users_alter_15():
     return jsonify(result), 200  # 返回查询结果
 
 #15项清单修改权限人员的添加（返回所有alter_15为true的姓名和号码）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_15_add', methods=['POST'])
 def add_user_alter_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -593,7 +597,7 @@ def add_user_alter_15():
         return jsonify({'message': '用户不存在'}), 404
 
 #15项清单修改权限人员的删除（返回所有alter_15为true的姓名和号码）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_15_delete', methods=['POST'])
 def delete_user_alter_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -603,8 +607,8 @@ def delete_user_alter_15():
     if user:
         # 如果用户存在，检查alter_15是否为True
         if user.alter_15:
-            # 如果alter_15为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_15为True，更新alter_15为False
+            user.alter_15 = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_15为True的用户信息
             users = UserModel.query.filter_by(alter_15=True).all()
@@ -617,7 +621,7 @@ def delete_user_alter_15():
             return jsonify(result), 200  # 删除成功，返回所有alter_15为True的用户信息
         else:
             # 如果alter_15为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_15为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -639,7 +643,7 @@ def get_users_alter_zc():
     return jsonify(result), 200  # 返回查询结果
 
 #政策文件修改权限人员的添加（返回所有alter_zc为true的姓名和电话）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_zc_add', methods=['POST'])
 def add_user_alter_zc():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -668,7 +672,7 @@ def add_user_alter_zc():
         return jsonify({'message': '用户不存在'}), 404
 
 #政策文件修改权限人员的删除（返回所有alter_zc为true的姓名和电话）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_zc_delete', methods=['POST'])
 def delete_user_alter_zc():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -678,8 +682,8 @@ def delete_user_alter_zc():
     if user:
         # 如果用户存在，检查alter_zc是否为True
         if user.alter_zc:
-            # 如果alter_zc为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_zc为True，更新alter_zc为False
+            user.alter_zc = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_zc为True的用户信息
             users = UserModel.query.filter_by(alter_zc=True).all()
@@ -692,7 +696,7 @@ def delete_user_alter_zc():
             return jsonify(result), 200  # 删除成功，返回所有alter_zc为True的用户信息
         else:
             # 如果alter_zc为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_zc为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -715,7 +719,7 @@ def get_users_alter_model():
 
 
 #典型案例修改权限人员的添加（返回所有alter_model为true的姓名和电话）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_model_add', methods=['POST'])
 def add_user_alter_model():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -744,7 +748,7 @@ def add_user_alter_model():
         return jsonify({'message': '用户不存在'}), 404
 
 #典型案例修改权限人员的删除（返回所有alter_model为true的姓名和电话）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_model_delete', methods=['POST'])
 def delete_user_alter_model():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -754,8 +758,8 @@ def delete_user_alter_model():
     if user:
         # 如果用户存在，检查alter_model是否为True
         if user.alter_model:
-            # 如果alter_model为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_model为True，更新alter_model为False
+            user.alter_model = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_model为True的用户信息
             users = UserModel.query.filter_by(alter_model=True).all()
@@ -768,7 +772,7 @@ def delete_user_alter_model():
             return jsonify(result), 200  # 删除成功，返回所有alter_model为True的用户信息
         else:
             # 如果alter_model为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_model为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -790,7 +794,7 @@ def get_users_alter_progress():
     return jsonify(result), 200  # 返回查询结果
 
 # 添加记录接口（验证用户信息、检查alter_progress并更新）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_progress_add', methods=['POST'])
 def add_user_alter_progress():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -820,7 +824,7 @@ def add_user_alter_progress():
 
 
 # 删除记录接口（验证用户信息、检查alter_progress并删除）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_progress_delete', methods=['POST'])
 def delete_user_alter_progress():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -830,8 +834,8 @@ def delete_user_alter_progress():
     if user:
         # 如果用户存在，检查alter_progress是否为True
         if user.alter_progress:
-            # 如果alter_progress为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_progress为True，更新alter_progress为False
+            user.alter_progress = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_progress为True的用户信息
             users = UserModel.query.filter_by(alter_progress=True).all()
@@ -844,7 +848,7 @@ def delete_user_alter_progress():
             return jsonify(result), 200  # 删除成功，返回所有alter_progress为True的用户信息
         else:
             # 如果alter_progress为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_progress为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -946,3 +950,26 @@ def update_15project(project_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
+
+# ==================== 微信上传文件接口 ====================
+@blue.route('/api/upload', methods=['POST'])
+def upload_file():
+    """
+    上传文件接口：接收文件本体，保存并返回文件URL
+    """
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({'success': False, 'message': '未提供文件'}), 400
+
+        filename = secure_filename(file.filename)
+        save_path = os.path.join('uploads', filename)
+        file.save(save_path)
+
+        # 构建文件可访问的URL（根据你的部署域名）
+        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
+
+        return jsonify({'success': True, 'file_url': file_url}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
