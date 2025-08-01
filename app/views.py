@@ -1,5 +1,9 @@
 #放视图
+import os
+
 from flask import Blueprint,request,jsonify,render_template
+from werkzeug.utils import secure_filename
+
 from app.models import TryModel,ZCDocument
 from app.plugins import db
 from sqlalchemy import func
@@ -442,35 +446,35 @@ def register_user():
 #转让页面接口（返回姓名、号码、密码）
 @blue.route('/user/validate', methods=['POST'])
 def validate_user():
-    # 获取请求中的数据
     name = request.form.get('name')
     phone = request.form.get('phone')
     password = request.form.get('password')
+
+    # 打印调试信息（开发时使用，部署前删除）
+    print(f"收到请求：name={name}, phone={phone}, password={password}")
 
     # 查询数据库中是否有该用户
     user = UserModel.query.filter_by(phone=phone).first()
 
     if user:
-        # 如果用户存在，验证姓名和密码
-        if user.name == name and check_password_hash(user.password, password):
-            # 如果姓名和密码匹配，更新principal字段为True
-            user.principal = True
-            db.session.commit()  # 提交更改
-
-            # 返回用户信息
-            user_info = {
-                'name': user.name,
-                'phone': user.phone,
-                'wx_openid': user.wx_openid,
-                'principal': user.principal  # 返回更新后的principal值
-            }
-            return jsonify(user_info), 200  # 匹配成功，返回用户信息
+        print(f"数据库用户：name={user.name}, phone={user.phone}, password={user.password}, principal={user.principal}")
+        if user.name == name and user.password == password:
+            if user.principal:
+                user_info = {
+                    'name': user.name,
+                    'phone': user.phone,
+                    'wx_openid': user.wx_openid,
+                    'principal': user.principal
+                }
+                return jsonify(user_info), 200
+            else:
+                return jsonify({'message': '该用户不是负责人，无法转让'}), 403
         else:
-            # 如果姓名或密码不匹配，返回失败信息
             return jsonify({'message': '姓名或密码错误'}), 400
     else:
-        # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
+
+
 
 #15项清单的查询权限人员（返回所有query_15为True的姓名和号码）
 @blue.route('/user/query_15', methods=['GET'])
@@ -489,7 +493,7 @@ def get_users_query_15():
     return jsonify(result), 200  # 返回查询结果
 
 #15项清单查询权限人员的添加（返回所有query_15为True的姓名和号码）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/query_15_add', methods=['POST'])
 def add_user_query_15():
     # 获取请求中的数据
     name = request.form.get('name')
@@ -518,7 +522,7 @@ def add_user_query_15():
         return jsonify({'message': '用户不存在'}), 404
 
 #15项清单查询权限人员的删除（返回所有query_15为True的姓名和号码）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/query_15_delete', methods=['POST'])
 def delete_user_query_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -528,8 +532,8 @@ def delete_user_query_15():
     if user:
         # 如果用户存在，检查query_15是否为True
         if user.query_15:
-            # 如果query_15为True，删除该用户
-            db.session.delete(user)
+            # 如果query_15为True，将query_15改为False
+            user.query_15 = False
             db.session.commit()  # 提交删除操作
             # 返回所有query_15为True的用户信息
             users = UserModel.query.filter_by(query_15=True).all()
@@ -542,7 +546,7 @@ def delete_user_query_15():
             return jsonify(result), 200  # 删除成功，返回所有query_15为True的用户信息
         else:
             # 如果query_15为False，无法删除
-            return jsonify({'message': '该用户无法删除，query_15为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -564,7 +568,7 @@ def get_users_alter_15():
     return jsonify(result), 200  # 返回查询结果
 
 #15项清单修改权限人员的添加（返回所有alter_15为true的姓名和号码）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_15_add', methods=['POST'])
 def add_user_alter_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -593,7 +597,7 @@ def add_user_alter_15():
         return jsonify({'message': '用户不存在'}), 404
 
 #15项清单修改权限人员的删除（返回所有alter_15为true的姓名和号码）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_15_delete', methods=['POST'])
 def delete_user_alter_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -603,8 +607,8 @@ def delete_user_alter_15():
     if user:
         # 如果用户存在，检查alter_15是否为True
         if user.alter_15:
-            # 如果alter_15为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_15为True，更新alter_15为False
+            user.alter_15 = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_15为True的用户信息
             users = UserModel.query.filter_by(alter_15=True).all()
@@ -617,7 +621,7 @@ def delete_user_alter_15():
             return jsonify(result), 200  # 删除成功，返回所有alter_15为True的用户信息
         else:
             # 如果alter_15为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_15为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -639,7 +643,7 @@ def get_users_alter_zc():
     return jsonify(result), 200  # 返回查询结果
 
 #政策文件修改权限人员的添加（返回所有alter_zc为true的姓名和电话）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_zc_add', methods=['POST'])
 def add_user_alter_zc():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -668,7 +672,7 @@ def add_user_alter_zc():
         return jsonify({'message': '用户不存在'}), 404
 
 #政策文件修改权限人员的删除（返回所有alter_zc为true的姓名和电话）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_zc_delete', methods=['POST'])
 def delete_user_alter_zc():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -678,8 +682,8 @@ def delete_user_alter_zc():
     if user:
         # 如果用户存在，检查alter_zc是否为True
         if user.alter_zc:
-            # 如果alter_zc为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_zc为True，更新alter_zc为False
+            user.alter_zc = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_zc为True的用户信息
             users = UserModel.query.filter_by(alter_zc=True).all()
@@ -692,7 +696,7 @@ def delete_user_alter_zc():
             return jsonify(result), 200  # 删除成功，返回所有alter_zc为True的用户信息
         else:
             # 如果alter_zc为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_zc为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -715,7 +719,7 @@ def get_users_alter_model():
 
 
 #典型案例修改权限人员的添加（返回所有alter_model为true的姓名和电话）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_model_add', methods=['POST'])
 def add_user_alter_model():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -744,7 +748,7 @@ def add_user_alter_model():
         return jsonify({'message': '用户不存在'}), 404
 
 #典型案例修改权限人员的删除（返回所有alter_model为true的姓名和电话）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_model_delete', methods=['POST'])
 def delete_user_alter_model():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -754,8 +758,8 @@ def delete_user_alter_model():
     if user:
         # 如果用户存在，检查alter_model是否为True
         if user.alter_model:
-            # 如果alter_model为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_model为True，更新alter_model为False
+            user.alter_model = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_model为True的用户信息
             users = UserModel.query.filter_by(alter_model=True).all()
@@ -768,7 +772,7 @@ def delete_user_alter_model():
             return jsonify(result), 200  # 删除成功，返回所有alter_model为True的用户信息
         else:
             # 如果alter_model为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_model为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -790,7 +794,7 @@ def get_users_alter_progress():
     return jsonify(result), 200  # 返回查询结果
 
 # 添加记录接口（验证用户信息、检查alter_progress并更新）
-@blue.route('/user/add', methods=['POST'])
+@blue.route('/user/alter_progress_add', methods=['POST'])
 def add_user_alter_progress():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -820,7 +824,7 @@ def add_user_alter_progress():
 
 
 # 删除记录接口（验证用户信息、检查alter_progress并删除）
-@blue.route('/user/delete', methods=['POST'])
+@blue.route('/user/alter_progress_delete', methods=['POST'])
 def delete_user_alter_progress():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
@@ -830,8 +834,8 @@ def delete_user_alter_progress():
     if user:
         # 如果用户存在，检查alter_progress是否为True
         if user.alter_progress:
-            # 如果alter_progress为True，删除该用户
-            db.session.delete(user)
+            # 如果alter_progress为True，更新alter_progress为False
+            user.alter_progress = False
             db.session.commit()  # 提交删除操作
             # 返回所有alter_progress为True的用户信息
             users = UserModel.query.filter_by(alter_progress=True).all()
@@ -844,7 +848,7 @@ def delete_user_alter_progress():
             return jsonify(result), 200  # 删除成功，返回所有alter_progress为True的用户信息
         else:
             # 如果alter_progress为False，无法删除
-            return jsonify({'message': '该用户无法删除，alter_progress为False'}), 400
+            return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
@@ -946,3 +950,373 @@ def update_15project(project_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
+
+# ==================== 微信上传文件接口 ====================
+@blue.route('/api/upload', methods=['POST'])
+def upload_file():
+    """
+    上传文件接口：接收文件本体，保存并返回文件URL
+    """
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({'success': False, 'message': '未提供文件'}), 400
+
+        filename = secure_filename(file.filename)
+        save_path = os.path.join('uploads', filename)
+        file.save(save_path)
+
+        # 构建文件可访问的URL（根据你的部署域名）
+        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
+
+        return jsonify({'success': True, 'file_url': file_url}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
+
+
+# ==================== progress表接口 ====================
+
+# 1. 查询接口：根据project_name查询所有记录的practice_time字段
+@blue.route('/api/progress/times', methods=['GET'])
+def get_progress_times():
+    """
+    根据project_name查询所有记录的practice_time字段
+    参数：project_name - 项目名称
+    """
+    try:
+        from app.models import ProgressModel
+        project_name = request.args.get('project_name')
+        
+        if not project_name:
+            return jsonify({
+                'success': False, 
+                'message': '缺少必要参数：project_name'
+            }), 400
+
+        # 查询指定项目的所有记录
+        progress_records = ProgressModel.query.filter_by(project_name=project_name).all()
+        
+        # 提取practice_time字段
+        times = []
+        for record in progress_records:
+            times.append({
+                'practice_time': record.practice_time.strftime('%Y-%m-%d %H:%M:%S') if record.practice_time else None
+            })
+
+        return jsonify({
+            'success': True,
+            'message': '查询成功',
+            'data': times,
+            'total_count': len(times)
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'查询失败: {str(e)}'
+        }), 500
+
+
+# 2. 查询接口：根据project_name和practice_time查询记录的详细信息
+@blue.route('/api/progress/detail', methods=['GET'])
+def get_progress_detail():
+    """
+    根据project_name和practice_time查询记录的详细信息
+    参数：project_name - 项目名称
+    参数：practice_time - 实践时间（格式：YYYY-MM-DD HH:MM:SS）
+    """
+    try:
+        from app.models import ProgressModel
+        from datetime import datetime
+        
+        project_name = request.args.get('project_name')
+        practice_time_str = request.args.get('practice_time')
+        
+        if not project_name or not practice_time_str:
+            return jsonify({
+                'success': False, 
+                'message': '缺少必要参数：project_name 或 practice_time'
+            }), 400
+
+        # 将时间字符串转换为datetime对象
+        try:
+            practice_time = datetime.strptime(practice_time_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': '时间格式错误，请使用 YYYY-MM-DD 格式'
+            }), 400
+
+        # 查询指定记录
+        record = ProgressModel.query.filter_by(
+            project_name=project_name,
+            practice_time=practice_time
+        ).first()
+
+        if not record:
+            return jsonify({
+                'success': False,
+                'message': '未找到对应的记录'
+            }), 404
+
+        # 返回详细信息
+        detail = {
+            'project_name': record.project_name,
+            'practice_time': record.practice_time.strftime('%Y-%m-%d ') if record.practice_time else None,
+            'practice_location': record.practice_location,
+            'practice_members': record.practice_members,
+            'practice_image_url': record.practice_image_url,
+            'news': record.news
+        }
+
+        return jsonify({
+            'success': True,
+            'message': '查询成功',
+            'data': detail
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'查询失败: {str(e)}'
+        }), 500
+
+
+# 3. 删除接口：根据project_name和practice_time删除记录
+@blue.route('/api/progress/delete', methods=['DELETE'])
+def delete_progress_record():
+    """
+    根据project_name和practice_time删除记录
+    参数：project_name - 项目名称
+    参数：practice_time - 实践时间（格式：YYYY-MM-DD HH:MM:SS）
+    """
+    try:
+        from app.models import ProgressModel
+        from datetime import datetime
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        project_name = data.get('project_name')
+        practice_time_str = data.get('practice_time')
+        
+        if not project_name or not practice_time_str:
+            return jsonify({
+                'success': False, 
+                'message': '缺少必要参数：project_name 或 practice_time'
+            }), 400
+
+        # 将时间字符串转换为datetime对象
+        try:
+            practice_time = datetime.strptime(practice_time_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': '时间格式错误，请使用 YYYY-MM-DD 格式'
+            }), 400
+
+        # 查找要删除的记录
+        record = ProgressModel.query.filter_by(
+            project_name=project_name,
+            practice_time=practice_time
+        ).first()
+
+        if not record:
+            return jsonify({
+                'success': False,
+                'message': '未找到对应的记录'
+            }), 404
+
+        # 保存删除前的信息用于返回
+        deleted_info = {
+            'project_name': record.project_name,
+            'practice_time': record.practice_time.strftime('%Y-%m-%d ') if record.practice_time else None
+        }
+
+        # 删除记录
+        db.session.delete(record)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '删除成功',
+            'deleted_record': deleted_info
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
+# 4. 修改接口：根据project_name和practice_time修改记录
+@blue.route('/api/progress/update', methods=['PUT'])
+def update_progress_record():
+    """
+    根据project_name和practice_time修改记录
+    参数：project_name - 项目名称
+    参数：practice_time - 实践时间（格式：YYYY-MM-DD HH:MM:SS）
+    可选参数：practice_location, practice_members, practice_image_url, news
+    """
+    try:
+        from app.models import ProgressModel
+        from datetime import datetime
+        
+        data = request.get_json()
+        
+        project_name = data.get('project_name')
+        practice_time_str = data.get('practice_time')
+        
+        if not project_name or not practice_time_str:
+            return jsonify({
+                'success': False, 
+                'message': '缺少必要参数：project_name 或 practice_time'
+            }), 400
+
+        # 将时间字符串转换为datetime对象
+        try:
+            practice_time = datetime.strptime(practice_time_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': '时间格式错误，请使用 YYYY-MM-DD 格式'
+            }), 400
+
+        # 查找要修改的记录
+        record = ProgressModel.query.filter_by(
+            project_name=project_name,
+            practice_time=practice_time
+        ).first()
+
+        if not record:
+            return jsonify({
+                'success': False,
+                'message': '未找到对应的记录'
+            }), 404
+
+        # 更新字段（只更新提供的字段）
+        if 'practice_location' in data:
+            record.practice_location = data['practice_location']
+        if 'practice_members' in data:
+            record.practice_members = data['practice_members']
+        if 'practice_image_url' in data:
+            record.practice_image_url = data['practice_image_url']
+        if 'news' in data:
+            record.news = data['news']
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '修改成功',
+            'data': {
+                'project_name': record.project_name,
+                'practice_time': record.practice_time.strftime('%Y-%m-%d') if record.practice_time else None,
+                'practice_location': record.practice_location,
+                'practice_members': record.practice_members,
+                'practice_image_url': record.practice_image_url,
+                'news': record.news
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'修改失败: {str(e)}'
+        }), 500
+
+
+# 5. 添加接口：添加新的progress记录
+@blue.route('/api/progress/add', methods=['POST'])
+def add_progress_record():
+    """
+    添加新的progress记录
+    参数：project_name, practice_time, practice_location, practice_members, news
+    可选参数：practice_image_url
+    """
+    try:
+        from app.models import ProgressModel, Projects15
+        from datetime import datetime
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        # 获取必要参数
+        project_name = data.get('project_name')
+        practice_time_str = data.get('practice_time')
+        practice_location = data.get('practice_location')
+        practice_members = data.get('practice_members')
+        news = data.get('news')
+        practice_image_url = data.get('practice_image_url')
+
+        # 参数验证
+        if not all([project_name, practice_time_str, practice_location, practice_members, news]):
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：project_name, practice_time, practice_location, practice_members, news'
+            }), 400
+
+        # 验证project_name是否存在于15projects表中
+        project = Projects15.query.filter_by(project_name=project_name).first()
+        if not project:
+            return jsonify({
+                'success': False,
+                'message': f'项目名称 "{project_name}" 在15projects表中不存在'
+            }), 400
+
+        # 将时间字符串转换为datetime对象
+        try:
+            practice_time = datetime.strptime(practice_time_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': '时间格式错误，请使用 YYYY-MM-DD 格式'
+            }), 400
+
+        # 检查是否已存在相同的记录
+        existing_record = ProgressModel.query.filter_by(
+            project_name=project_name,
+            practice_time=practice_time
+        ).first()
+
+        if existing_record:
+            return jsonify({
+                'success': False,
+                'message': '该项目的该时间点已存在记录'
+            }), 400
+
+        # 创建新记录
+        new_record = ProgressModel(
+            project_name=project_name,
+            practice_time=practice_time,
+            practice_location=practice_location,
+            practice_members=practice_members,
+            practice_image_url=practice_image_url,
+            news=news
+        )
+
+        # 添加到数据库
+        db.session.add(new_record)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '添加成功',
+            'data': {
+                'project_name': new_record.project_name,
+                'practice_time': new_record.practice_time.strftime('%Y-%m-%d') if new_record.practice_time else None,
+                'practice_location': new_record.practice_location,
+                'practice_members': new_record.practice_members,
+                'practice_image_url': new_record.practice_image_url,
+                'news': new_record.news
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'添加失败: {str(e)}'
+        }), 500
