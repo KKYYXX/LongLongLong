@@ -958,16 +958,21 @@ def upload_file():
             return jsonify({'success': False, 'message': '未提供文件'}), 400
 
         filename = secure_filename(file.filename)
-        save_path = os.path.join('uploads', filename)
+
+        # 确保 uploads 目录存在
+        upload_folder = os.path.join(os.getcwd(), 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        save_path = os.path.join(upload_folder, filename)
         file.save(save_path)
 
-        # 构建文件可访问的URL（根据你的部署域名）
         file_url = f"http://127.0.0.1:5000/uploads/{filename}"
 
         return jsonify({'success': True, 'file_url': file_url}), 200
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
+
 
 
 # ==================== progress表接口 ====================
