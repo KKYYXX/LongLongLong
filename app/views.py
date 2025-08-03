@@ -7,142 +7,20 @@ from app.plugins import db
 from sqlalchemy import func
 from datetime import datetime
 from werkzeug.security import check_password_hash
-from app.models import TryModel, UserModel, ZCDocument, UploadMod
+from app.models import TryModel, UserModel, ZCDocument
+
+from flask import request, jsonify, send_from_directory
+
+
+
 
 blue = Blueprint('blue',__name__)
 
 #视图
-'''
-@blue.route('/dept/info/<id>',methods=['GET'])
-#数据查询模型
-def getDepInfo(id):
-
-    dept= TryModel.query.get(id)
-
-    return f'序号：{ dept.id }，名字：{ dept.name }'
-
-#记录添加
-@blue.route('/dept/add',methods=['POST'])
-def addDepinfo():
-
-    try1 = (TryModel(
-    name = request.form.get('name'),
-    id =request.form.get('id',type=int)
-    ))
-    db.session.add(try1)
-    db.session.commit()
-
-    return "添加信息成功"
-
-#记录更新
-@blue.route('/dept/upd',methods=['POST'])
-def updDepinfo():
-
-    try2 = TryModel.query.get(request.form.get('id'))
-    try2.name = request.form.get('name')
-
-    db.session.commit()
-
-    return "修改信息成功"
-
-#记录删除
-@blue.route('/dept/del',methods=['POST'])
-def delDepinfo():
-
-    try3 = TryModel.query.get(request.form.get('id'))
-
-    db.session.delete(try3)
-
-    db.session.commit()
-
-    return "删除信息成功"
-
-#信息查询（条件查询）显示的是列表的形式
-@blue.route('/dept/find',methods=['GET'])
-def finddepts():
-
-    info_1 = TryModel.query.filter(TryModel.name == '王五').first()  #只显示第一个查询结果
-
-    #多条件查询
-    info_2 = TryModel.query.filter(TryModel.name == '王五',TryModel.id == 3 ).all()  #显示所有查询结果
-
-    return '查询成功'
-
-#模糊查询
-@blue.route('/dept/like',methods=['GET'])
-def likedeptdatail():
-
-    #            张%                 %三                %三%     都可
-    # 分别对应 startswith('张')   endswith('三')     contains('三')
-    info_1 = TryModel.query.filter(TryModel.name.like('张%')).all()
-
-    result = []
-    for item in info_1:
-        result.append(f'序号：{item.id}，名字：{item.name}')
-    return '\n'.join(result)
-
-#模糊查询2.0
-@blue.route('/dept/like1',methods=['GET'])
-def like1deptdatail():
-
-    info_1 = TryModel.query.filter(TryModel.name.startswith('张')).all()
-
-    result = []
-    for item in info_1:
-        result.append(f'序号：{item.id}，名字：{item.name}')
-    return '\n'.join(result)
-
-#查询结果按升序排列显示，默认按升序
-@blue.route('/dept/order',methods=['GET'])
-def orderdeptdatail():
-
-    info_1 = TryModel.query.order_by(TryModel.id).all()
-
-    result = []
-    for item in info_1:
-        result.append(f'序号：{item.id}，名字：{item.name}')
-    return '\n'.join(result)
-
-#查询结果按降序排列显示
-@blue.route('/dept/order1',methods=['GET'])
-def order1deptdatail():
-
-    info_1 = TryModel.query.order_by(TryModel.id.desc()).all()
-
-    result = []
-    for item in info_1:
-        result.append(f'序号：{item.id}，名字：{item.name}')
-    return '\n'.join(result)
-
-#查询结果只显示前几条
-@blue.route('/dept/top',methods=['GET'])
-def topdeptdatail():
-
-    #只看前两条
-    info_1 = TryModel.query.limit(2).all()
-
-    result = []
-    for item in info_1:
-        result.append(f'序号：{item.id}，名字：{item.name}')
-    return '\n'.join(result)
-
-#分组查询
-@blue.route('/dept/group',methods=['GET'])
-def groupdeptdatail():
-    #按性别分组
-    info = db.session\
-        .query(TryModel.gender,func.count(TryModel.gender).label('count_gender'))\
-        .group_by(TryModel.gender).all()
-
-    result = []
-    for item in info:
-        result.append(f'性别：{item.gender}，数量：{item.count_gender}')
-    return '\n'.join(result)
-'''
 
 # ==================== ZCDocument 表接口 ====================
 
-# 1. 查询所有zc_documents数据——联调over
+# 1. 查询所有zc_documents数据
 @blue.route('/api/zcdocuments', methods=['GET'])
 def get_all_zcdocuments():
     """
@@ -156,13 +34,22 @@ def get_all_zcdocuments():
         # 将查询结果转换为字典列表
         documents_list = []
         for doc in documents:
-            documents_list.append({
+            '''documents_list.append({
                 #'user_id': doc.user_id,
                 'file_url': doc.file_url,
                 'file_type': doc.file_type,
                 'original_name': doc.original_name,
                 'file_size': doc.file_size,
                 'uploaded_at': doc.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') if doc.uploaded_at else None
+            })'''
+            # views.py 中 get_all_zcdocuments 函数中：
+            documents_list.append({
+                'file_name': doc.original_name,  # 改名为更通俗
+                'file_size': doc.file_size,
+                'file_url': doc.file_url,
+                'uploaded_at': doc.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') if doc.uploaded_at else None,
+                'id': doc.id
+
             })
 
         return jsonify({
@@ -180,78 +67,92 @@ def get_all_zcdocuments():
         }), 500
 
 
-'''
 # 2. 添加zc_documents数据
 @blue.route('/api/zcdocuments', methods=['POST'])
 def add_zcdocument():
     """
     添加新的zc_documents记录
     接收参数：
-    - user_id: 微信用户openid
     - file_url: 文件访问URL
-    - file_type: 文件类型(pdf/doc/docx)
+    - file_type: 文件类型(pdf/doc/docx)（兼容filetype参数）
     - original_name: 原始文件名
     - file_size: 文件大小(字节)
     """
     try:
-        # 获取请求参数
-        data = request.get_json() if request.is_json else request.form
+        # 统一获取请求数据（支持JSON和表单格式）
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()  # 转换为字典便于处理
 
-        #user_id = data.get('user_id')
-        file_url = data.get('file_url')
-        file_type = data.get('file_type')
-        original_name = data.get('original_name')
-        file_size = data.get('file_size')
+        # 提取参数（兼容常见拼写错误，如filetype -> file_type）
+        file_url = data.get('file_url', '').strip()
+        # 优先取file_type，若不存在则尝试取filetype（兼容前端拼写错误）
+        file_type = data.get('file_type', data.get('filetype', '')).strip().lower()
+        original_name = data.get('original_name', '').strip()
+        file_size_str = data.get('file_size', '').strip()
 
-        # 参数验证
-        if not all([ file_url, file_type, original_name, file_size]):
-            return jsonify({
-                'success': False,
-                'message': '缺少必要参数：file_url, file_type, original_name, file_size'
-            }), 400
+        # 参数验证：检查必填参数是否存在
+        required_params = [
+            ('file_url', file_url),
+            ('file_type', file_type),
+            ('original_name', original_name),
+            ('file_size', file_size_str)
+        ]
+        for param_name, param_value in required_params:
+            if not param_value:
+                return jsonify({
+                    'success': False,
+                    'message': f'缺少必要参数：{param_name}'
+                }), 400
 
         # 验证文件类型
-        if file_type not in ['pdf', 'doc', 'docx']:
+        allowed_types = ['pdf', 'doc', 'docx']
+        if file_type not in allowed_types:
             return jsonify({
                 'success': False,
-                'message': '文件类型必须是 pdf, doc, 或 docx'
+                'message': f'文件类型必须是：{", ".join(allowed_types)}'
             }), 400
 
-        # 验证文件大小是否为数字
+        # 验证文件大小（必须为正整数）
         try:
-            file_size = int(file_size)
+            file_size = int(file_size_str)
             if file_size <= 0:
                 raise ValueError("文件大小必须大于0")
         except (ValueError, TypeError):
             return jsonify({
                 'success': False,
-                'message': '文件大小必须是正整数'
+                'message': '文件大小必须是正整数（字节）'
             }), 400
 
-        # 创建新的ZCDocument记录
+        # 验证file_url格式（基础校验）
+        if not (file_url.startswith(('http://', 'https://')) or os.path.isfile(file_url)):
+            return jsonify({
+                'success': False,
+                'message': 'file_url必须是有效的HTTP/HTTPS链接或本地文件路径'
+            }), 400
+
+        # 创建并保存记录
         new_document = ZCDocument(
-           # user_id=user_id,
             file_url=file_url,
             file_type=file_type,
             original_name=original_name,
             file_size=file_size,
             uploaded_at=datetime.utcnow()
         )
-
-        # 添加到数据库
         db.session.add(new_document)
         db.session.commit()
 
+        # 返回成功响应（与查询接口字段保持一致）
         return jsonify({
             'success': True,
             'message': '添加成功',
             'data': {
                 'id': new_document.id,
-                #'user_id': new_document.user_id,
+                'file_name': new_document.original_name,  # 与查询接口字段统一
+                'file_size': new_document.file_size,
                 'file_url': new_document.file_url,
                 'file_type': new_document.file_type,
-                'original_name': new_document.original_name,
-                'file_size': new_document.file_size,
                 'uploaded_at': new_document.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
             }
         }), 201
@@ -262,54 +163,7 @@ def add_zcdocument():
             'success': False,
             'message': f'添加失败: {str(e)}'
         }), 500
-'''
-import os
 
-
-@blue.route('/api/upload', methods=['POST'])
-def upload_file():
-    """
-    上传文件接口：接收文件本体，保存并返回文件URL
-    """
-    try:
-        file = request.files.get('file')
-        if not file:
-            return jsonify({'success': False, 'message': '未提供文件'}), 400
-
-        # 1. 创建保存文件的目录
-        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
-        if not os.path.exists(upload_dir):
-            os.makedirs(upload_dir)
-
-        # 2. 安全地获取文件名
-        filename = secure_filename(file.filename)
-
-        # 3. 确保文件名唯一
-        base, ext = os.path.splitext(filename)
-        counter = 1
-        while os.path.exists(os.path.join(upload_dir, filename)):
-            filename = f"{base}_{counter}{ext}"
-            counter += 1
-
-        # 4. 保存文件
-        file_path = os.path.join(upload_dir, filename)
-        file.save(file_path)
-
-        # 5. 返回可访问的URL
-        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
-
-        return jsonify({
-            'success': True,
-            'message': '上传成功',
-            'file_url': file_url
-        }), 200
-
-    except Exception as e:
-        print(f"文件上传错误: {str(e)}")  # 添加错误日志
-        return jsonify({
-            'success': False,
-            'message': f'上传失败: {str(e)}'
-        }), 500
 
 # 3. 删除zc_documents记录
 @blue.route('/api/zcdocuments/<int:document_id>', methods=['DELETE'])
@@ -461,16 +315,20 @@ def register_user():
     existing_user = UserModel.query.filter_by(phone=phone).first()
 
     if existing_user:
-        # 如果用户已存在，匹配名字和微信号
+        # 检查用户是否为负责人
+        if not existing_user.principal:
+            return jsonify({'message': '该用户非负责人'}), 403
+
+        # 如果用户已存在且是负责人，匹配名字和微信号
         if existing_user.name == name and existing_user.wx_openid == wx_openid:
             # 如果匹配，允许注册（返回用户信息）
             user_info = {
                 'name': existing_user.name,
                 'phone': existing_user.phone,
                 'wx_openid': existing_user.wx_openid,
-                'password': existing_user.password  # Assuming password is already hashed
+                'password': existing_user.password  # 假设密码已经过哈希处理
             }
-            return jsonify(user_info), 200  # Registration successful (user exists and matches)
+            return jsonify(user_info), 200  # 注册成功（用户已存在且信息匹配）
         else:
             # 如果名字和微信号不匹配，注册失败
             return jsonify({'message': 'User details do not match'}), 400
@@ -998,16 +856,21 @@ def upload_file():
             return jsonify({'success': False, 'message': '未提供文件'}), 400
 
         filename = secure_filename(file.filename)
-        save_path = os.path.join('uploads', filename)
+
+        # 确保 uploads 目录存在
+        upload_folder = os.path.join(os.getcwd(), 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        save_path = os.path.join(upload_folder, filename)
         file.save(save_path)
 
-        # 构建文件可访问的URL（根据你的部署域名）
         file_url = f"http://127.0.0.1:5000/uploads/{filename}"
 
         return jsonify({'success': True, 'file_url': file_url}), 200
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
+
 
 
 # ==================== progress表接口 ====================
