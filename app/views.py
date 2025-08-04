@@ -90,7 +90,7 @@ def add_zcdocument():
         # 优先取file_type，若不存在则尝试取filetype（兼容前端拼写错误）
         file_type = data.get('file_type', data.get('filetype', '')).strip().lower()
         original_name = data.get('original_name', '').strip()
-        file_size_str = data.get('file_size', '').strip()
+        file_size_str = str(data.get('file_size', '')).strip()
 
         # 参数验证：检查必填参数是否存在
         required_params = [
@@ -114,16 +114,8 @@ def add_zcdocument():
                 'message': f'文件类型必须是：{", ".join(allowed_types)}'
             }), 400
 
-        # 验证文件大小（必须为正整数）
-        try:
-            file_size = int(file_size_str)
-            if file_size <= 0:
-                raise ValueError("文件大小必须大于0")
-        except (ValueError, TypeError):
-            return jsonify({
-                'success': False,
-                'message': '文件大小必须是正整数（字节）'
-            }), 400
+
+
 
         # 验证file_url格式（基础校验）
         if not (file_url.startswith(('http://', 'https://')) or os.path.isfile(file_url)):
@@ -137,20 +129,19 @@ def add_zcdocument():
             file_url=file_url,
             file_type=file_type,
             original_name=original_name,
-            file_size=file_size,
+            file_size=file_size_str,
             uploaded_at=datetime.utcnow()
         )
         db.session.add(new_document)
         db.session.commit()
 
-        # 返回成功响应（与查询接口字段保持一致）
         return jsonify({
             'success': True,
             'message': '添加成功',
             'data': {
                 'id': new_document.id,
-                'file_name': new_document.original_name,  # 与查询接口字段统一
-                'file_size': new_document.file_size,
+                'file_name': new_document.original_name,
+                'file_size': str(new_document.file_size),  # 强制转为字符串
                 'file_url': new_document.file_url,
                 'file_type': new_document.file_type,
                 'uploaded_at': new_document.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
@@ -844,34 +835,6 @@ def update_15project(project_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
 
-# ==================== 微信上传文件接口 ====================
-@blue.route('/api/upload', methods=['POST'])
-def upload_file():
-    """
-    上传文件接口：接收文件本体，保存并返回文件URL
-    """
-    try:
-        file = request.files.get('file')
-        if not file:
-            return jsonify({'success': False, 'message': '未提供文件'}), 400
-
-        filename = secure_filename(file.filename)
-
-        # 确保 uploads 目录存在
-        upload_folder = os.path.join(os.getcwd(), 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
-
-        save_path = os.path.join(upload_folder, filename)
-        file.save(save_path)
-
-        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
-
-        return jsonify({'success': True, 'file_url': file_url}), 200
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
-
-
 
 # ==================== progress表接口 ====================
 
@@ -1218,3 +1181,32 @@ def add_progress_record():
             'success': False,
             'message': f'添加失败: {str(e)}'
         }), 500
+
+
+# ==================== 微信上传文件接口 ====================
+@blue.route('/api/upload', methods=['POST'])
+def upload_file():
+    """
+    上传文件接口：接收文件本体，保存并返回文件URL
+    """
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({'success': False, 'message': '未提供文件'}), 400
+
+        filename = secure_filename(file.filename)
+
+        # 确保 uploads 目录存在
+        upload_folder = os.path.join(os.getcwd(), 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        save_path = os.path.join(upload_folder, filename)
+        file.save(save_path)
+
+        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
+
+        return jsonify({'success': True, 'file_url': file_url}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
+

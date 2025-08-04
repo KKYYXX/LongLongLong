@@ -89,7 +89,6 @@ class ZCDocument(db.Model):
     __tablename__ = 'zc_documents'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='文档唯一标识ID')
-    #user_id = db.Column(db.String(128), nullable=False, comment='微信用户openid')
     file_url = db.Column(db.String(512), nullable=False, comment='文件访问URL')
     file_type = db.Column(db.Enum('pdf', 'doc', 'docx'), nullable=False, comment='文件类型(pdf/word)')
     original_name = db.Column(db.String(255), nullable=False, comment='原始文件名')
