@@ -379,20 +379,24 @@ def get_users_query_15():
 #15项清单查询权限人员的添加（返回所有query_15为True的姓名和号码）
 @blue.route('/user/query_15_add', methods=['POST'])
 def add_user_query_15():
-    # 获取请求中的数据
+    # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
     phone = request.form.get('phone')
+
+    if not all([name, phone]):
+        return jsonify({'message': '缺少必要参数'}), 400
+
     # 查询数据库中是否已有该用户
     user = UserModel.query.filter_by(phone=phone).first()
     if user:
-        # 如果用户已存在且query_15为True，返回"已存在"
+        # 如果用户已存在且 query_15 为 True，返回"已存在"
         if user.query_15:
-            return jsonify({"message": "已存在"}), 400  # 已存在并且query_15为True
+            return jsonify({"message": "已存在"}), 400
         else:
-            # 如果用户存在且query_15为False，更新query_15为True
+            # 如果用户存在且 query_15 为 False，更新 query_15 为 True
             user.query_15 = True
-            db.session.commit()  # 提交更改
-            # 返回所有query_15为True的用户信息
+            db.session.commit()
+            # 返回所有 query_15 为 True 的用户信息
             users = UserModel.query.filter_by(query_15=True).all()
             result = []
             for u in users:
@@ -400,10 +404,12 @@ def add_user_query_15():
                     'name': u.name,
                     'phone': u.phone
                 })
-            return jsonify(result), 200  # 更新成功，返回所有query_15为True的用户信息
+            return jsonify(result), 200
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
+
+
 
 #15项清单查询权限人员的删除（返回所有query_15为True的姓名和号码）
 @blue.route('/user/query_15_delete', methods=['POST'])
@@ -411,15 +417,16 @@ def delete_user_query_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
     phone = request.form.get('phone')
+
     # 查询数据库中是否已有该用户
     user = UserModel.query.filter_by(phone=phone).first()
     if user:
-        # 如果用户存在，检查query_15是否为True
+        # 如果用户存在，检查 query_15 是否为 True
         if user.query_15:
-            # 如果query_15为True，将query_15改为False
+            # 如果 query_15 为 True，更新为 False
             user.query_15 = False
-            db.session.commit()  # 提交删除操作
-            # 返回所有query_15为True的用户信息
+            db.session.commit()  # 提交更改
+            # 返回所有 query_15 为 True 的用户信息
             users = UserModel.query.filter_by(query_15=True).all()
             result = []
             for u in users:
@@ -427,13 +434,15 @@ def delete_user_query_15():
                     'name': u.name,
                     'phone': u.phone
                 })
-            return jsonify(result), 200  # 删除成功，返回所有query_15为True的用户信息
+            return jsonify(result), 200  # 删除成功，返回所有 query_15 为 True 的用户信息
         else:
-            # 如果query_15为False，无法删除
+            # 如果 query_15 为 False，无法删除
             return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
+
+
 
 #15项清单修改权限人员（返回所有alter_15为true的姓名和号码）
 @blue.route('/user/alter_15', methods=['GET'])
@@ -451,23 +460,27 @@ def get_users_alter_15():
 
     return jsonify(result), 200  # 返回查询结果
 
-#15项清单修改权限人员的添加（返回所有alter_15为true的姓名和号码）
+#15项清单修改权限人员的添加（返回所有alter_15为True的姓名和号码）
 @blue.route('/user/alter_15_add', methods=['POST'])
 def add_user_alter_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
     phone = request.form.get('phone')
+
+    if not all([name, phone]):
+        return jsonify({'message': '缺少必要参数'}), 400
+
     # 查询数据库中是否已有该用户
     user = UserModel.query.filter_by(phone=phone).first()
     if user:
-        # 如果用户已存在且alter_15为True，返回"已存在"
+        # 如果用户已存在且 alter_15 为 True，返回"已存在"
         if user.alter_15:
-            return jsonify({"message": "已存在"}), 400  # 已存在并且alter_15为True
+            return jsonify({"message": "已存在"}), 400
         else:
-            # 如果用户存在且alter_15为False，更新alter_15为True
+            # 如果用户存在且 alter_15 为 False，更新 alter_15 为 True
             user.alter_15 = True
-            db.session.commit()  # 提交更改
-            # 返回所有alter_15为True的用户信息
+            db.session.commit()
+            # 返回所有 alter_15 为 True 的用户信息
             users = UserModel.query.filter_by(alter_15=True).all()
             result = []
             for u in users:
@@ -475,26 +488,27 @@ def add_user_alter_15():
                     'name': u.name,
                     'phone': u.phone
                 })
-            return jsonify(result), 200  # 更新成功，返回所有alter_15为True的用户信息
+            return jsonify(result), 200
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
 
-#15项清单修改权限人员的删除（返回所有alter_15为true的姓名和号码）
+#15项清单修改权限人员的删除（返回所有alter_15为True的姓名和号码）
 @blue.route('/user/alter_15_delete', methods=['POST'])
 def delete_user_alter_15():
     # 获取请求中的数据（姓名和手机号）
     name = request.form.get('name')
     phone = request.form.get('phone')
+
     # 查询数据库中是否已有该用户
     user = UserModel.query.filter_by(phone=phone).first()
     if user:
-        # 如果用户存在，检查alter_15是否为True
+        # 如果用户存在，检查 query_15 是否为 True
         if user.alter_15:
-            # 如果alter_15为True，更新alter_15为False
+            # 如果 alter_15 为 True，更新为 False
             user.alter_15 = False
-            db.session.commit()  # 提交删除操作
-            # 返回所有alter_15为True的用户信息
+            db.session.commit()  # 提交更改
+            # 返回所有 alter_15 为 True 的用户信息
             users = UserModel.query.filter_by(alter_15=True).all()
             result = []
             for u in users:
@@ -502,13 +516,15 @@ def delete_user_alter_15():
                     'name': u.name,
                     'phone': u.phone
                 })
-            return jsonify(result), 200  # 删除成功，返回所有alter_15为True的用户信息
+            return jsonify(result), 200  # 删除成功，返回所有 query_15 为 True 的用户信息
         else:
-            # 如果alter_15为False，无法删除
+            # 如果 query_15 为 False，无法删除
             return jsonify({'message': '该用户无法删除，本就没有该权限'}), 400
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
+
+
 
 #政策文件修改权限人员（返回所有alter_zc为true的姓名和电话）
 @blue.route('/user/alter_zc', methods=['GET'])
@@ -584,6 +600,7 @@ def delete_user_alter_zc():
     else:
         # 如果用户不存在，返回失败信息
         return jsonify({'message': '用户不存在'}), 404
+
 
 #典型案例修改权限人员（返回所有alter_model为true的姓名和电话）
 @blue.route('/user/alter_model', methods=['GET'])
