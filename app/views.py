@@ -1210,3 +1210,14 @@ def upload_file():
     except Exception as e:
         return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
 
+# ==================== 文件访问接口 ====================
+@blue.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """
+    文件访问接口：提供上传文件的访问
+    """
+    try:
+        upload_folder = os.path.join(os.getcwd(), 'uploads')
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'文件访问失败: {str(e)}'}), 404
