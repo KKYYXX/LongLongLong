@@ -332,32 +332,30 @@ def register_user():
 def validate_user():
     name = request.form.get('name')
     phone = request.form.get('phone')
-    password = request.form.get('password')
+    wx_openid = request.form.get('wx_openid')  # 接收wx_openid参数
 
     # 打印调试信息（开发时使用，部署前删除）
-    print(f"收到请求：name={name}, phone={phone}, password={password}")
+    print(f"收到请求：name={name}, phone={phone}, wx_openid={wx_openid}")
 
     # 查询数据库中是否有该用户
     user = UserModel.query.filter_by(phone=phone).first()
 
     if user:
-        print(f"数据库用户：name={user.name}, phone={user.phone}, password={user.password}, principal={user.principal}")
-        if user.name == name and user.password == password:
+        print(f"数据库用户：name={user.name}, phone={user.phone}, wx_openid={user.wx_openid}, principal={user.principal}")
+        if user.name == name and user.wx_openid == wx_openid and user.phone == phone:
             if user.principal:
                 user_info = {
                     'name': user.name,
                     'phone': user.phone,
-                    'wx_openid': user.wx_openid,
                     'principal': user.principal
                 }
                 return jsonify(user_info), 200
             else:
                 return jsonify({'message': '该用户不是负责人，无法转让'}), 403
         else:
-            return jsonify({'message': '姓名或密码错误'}), 400
+            return jsonify({'message': '信息有误，请重新输入'}), 400
     else:
         return jsonify({'message': '用户不存在'}), 404
-
 
 
 #15项清单的查询权限人员（返回所有query_15为True的姓名和号码）
