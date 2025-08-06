@@ -6,7 +6,7 @@ from app.models import TryModel,ZCDocument
 from app.plugins import db
 from sqlalchemy import func
 from datetime import datetime
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import TryModel, UserModel, ZCDocument
 
 from flask import request, jsonify, send_from_directory
@@ -293,69 +293,175 @@ def delete_model(model_id):
         return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
 
 # ==================== UserModel 表接口 ====================
-#用户注册接口（返回姓名、号码、微信、密码）
+#用户注册接口
 @blue.route('/user/register', methods=['POST'])
 def register_user():
-    # 获取请求中的注册信息
-    name = request.form.get('name')
-    phone = request.form.get('phone')
-    password = request.form.get('password')
-    wx_openid = request.form.get('wx_openid')
+    data = request.json
 
-    # 查询手机号是否已经注册
-    existing_user = UserModel.query.filter_by(phone=phone).first()
+    name = data.get('name')
+    phone = data.get('phone')
+    wx_openid = data.get('wx_openid')
+    password = data.get('password')
 
-    if existing_user:
-        # 检查用户是否为负责人
-        if not existing_user.principal:
-            return jsonify({'message': '该用户非负责人'}), 403
+    if not all([name, phone, wx_openid, password]):
+        return jsonify({'success': False, 'message': '请填写所有字段'}), 400
 
-        # 如果用户已存在且是负责人，匹配名字和微信号
-        if existing_user.name == name and existing_user.wx_openid == wx_openid:
-            # 如果匹配，允许注册（返回用户信息）
-            user_info = {
-                'name': existing_user.name,
-                'phone': existing_user.phone,
-                'wx_openid': existing_user.wx_openid,
-                'password': existing_user.password  # 假设密码已经过哈希处理
-            }
-            return jsonify(user_info), 200  # 注册成功（用户已存在且信息匹配）
-        else:
-            # 如果名字和微信号不匹配，注册失败
-            return jsonify({'message': 'User details do not match'}), 400
+    # 检查手机号是否已存在
+    if UserModel.query.filter_by(phone=phone).first():
+        return jsonify({'success': False, 'message': '该手机号已注册'}), 409
+
+    # 密码加密存储
+    hashed_password = generate_password_hash(password)
+
+    # 创建用户实例（默认权限字段为 False）
+    new_user = UserModel(
+        name=name,
+        phone=phone,
+        wx_openid=wx_openid,
+        password=hashed_password,
+        principal=False  # 默认无权限
+    )
+
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        return jsonify({'success': True, 'message': '注册成功'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'注册失败: {str(e)}'}), 500
+
+#普通登录接口
+@blue.route('/user/common_login', methods=['POST'])
+def user_login():
+    data = request.json
+    phone = data.get('phone')
+    wx_openid = data.get('wx_openid')
+    password = data.get('password')
+
+    if not password:
+        return jsonify({'success': False, 'message': '请输入密码'}), 400
+
+    user = None
+
+    # 根据手机号或微信号查询
+    if phone:
+        user = UserModel.query.filter_by(phone=phone).first()
+    elif wx_openid:
+        user = UserModel.query.filter_by(wx_openid=wx_openid).first()
     else:
-        # 如果用户不存在
-        return jsonify({'message': 'User not found'}), 404
+        return jsonify({'success': False, 'message': '请提供手机号或微信号'}), 400
+
+    if not user:
+        return jsonify({'success': False, 'message': '用户不存在'}), 404
+
+    # 校验密码
+    if not check_password_hash(user.password, password):
+        return jsonify({'success': False, 'message': '密码错误'}), 401
+
+    # 登录成功
+    return jsonify({
+        'success': True,
+        'message': '登录成功',
+        'user': {
+            'name': user.name,
+            'phone': user.phone,
+            'wx_openid': user.wx_openid,
+            'principal': user.principal,
+            'alter_15': user.alter_15,
+            'query_15': user.query_15,
+            'alter_zc': user.alter_zc,
+            'alter_model': user.alter_model,
+            'alter_progress': user.alter_progress
+        }
+    })
+
+#权限管理登录接口
+@blue.route('/user/principal_login', methods=['POST'])
+def user_login():
+    data = request.json
+    phone = data.get('phone')
+    wx_openid = data.get('wx_openid')
+    password = data.get('password')
+
+    if not password:
+        return jsonify({'success': False, 'message': '请输入密码'}), 400
+
+    user = None
+
+    # 优先手机号登录
+    if phone:
+        user = UserModel.query.filter_by(phone=phone).first()
+    elif wx_openid:
+        user = UserModel.query.filter_by(wx_openid=wx_openid).first()
+    else:
+        return jsonify({'success': False, 'message': '请提供手机号或微信号'}), 400
+
+    if not user:
+        return jsonify({'success': False, 'message': '用户不存在'}), 404
+
+    # 校验密码
+    if not check_password_hash(user.password, password):
+        return jsonify({'success': False, 'message': '密码错误'}), 401
+
+    # 权限校验
+    if not user.principal:
+        return jsonify({'success': False, 'message': '该用户无权限'}), 403
+
+    # 登录成功
+    return jsonify({
+        'success': True,
+        'message': '登录成功',
+        'user': {
+            'name': user.name,
+            'phone': user.phone,
+            'wx_openid': user.wx_openid,
+            'principal': user.principal
+        }
+    })
+
 
 #转让页面接口（返回姓名、号码、密码）
-@blue.route('/user/validate', methods=['POST'])
-def validate_user():
+@blue.route('/user/transfer_principal', methods=['POST'])
+def transfer_principal():
+    # 被转让人信息（接收人）
     name = request.form.get('name')
     phone = request.form.get('phone')
-    wx_openid = request.form.get('wx_openid')  # 接收wx_openid参数
+    wx_openid = request.form.get('wx_openid')
 
-    # 打印调试信息（开发时使用，部署前删除）
-    print(f"收到请求：name={name}, phone={phone}, wx_openid={wx_openid}")
+    # 当前负责人手机号（发起人）
+    current_phone = request.form.get('current_phone')
 
-    # 查询数据库中是否有该用户
-    user = UserModel.query.filter_by(phone=phone).first()
+    if not all([name, phone, wx_openid, current_phone]):
+        return jsonify({'message': '请提供完整信息'}), 400
 
-    if user:
-        print(f"数据库用户：name={user.name}, phone={user.phone}, wx_openid={user.wx_openid}, principal={user.principal}")
-        if user.name == name and user.wx_openid == wx_openid and user.phone == phone:
-            if user.principal:
-                user_info = {
-                    'name': user.name,
-                    'phone': user.phone,
-                    'principal': user.principal
-                }
-                return jsonify(user_info), 200
-            else:
-                return jsonify({'message': '该用户不是负责人，无法转让'}), 403
-        else:
-            return jsonify({'message': '信息有误，请重新输入'}), 400
-    else:
-        return jsonify({'message': '用户不存在'}), 404
+    # 查询被转让人
+    target_user = UserModel.query.filter_by(phone=phone).first()
+    if not target_user:
+        return jsonify({'message': '被转让用户不存在'}), 404
+
+    # 校验目标用户信息是否匹配
+    if target_user.name != name or target_user.wx_openid != wx_openid:
+        return jsonify({'message': '被转让用户信息有误，请确认'}), 400
+
+    # 校验目标用户不能已是负责人
+    if target_user.principal:
+        return jsonify({'message': '该用户已是负责人，不能转让'}), 403
+
+    # 查询当前负责人
+    current_user = UserModel.query.filter_by(phone=current_phone).first()
+    if not current_user or not current_user.principal:
+        return jsonify({'message': '当前用户无权进行转让'}), 403
+
+    try:
+        # 执行转让操作
+        current_user.principal = False
+        target_user.principal = True
+
+        db.session.commit()
+        return jsonify({'message': '负责人转让成功'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'转让失败: {str(e)}'}), 500
 
 
 #15项清单的查询权限人员（返回所有query_15为True的姓名和号码）
