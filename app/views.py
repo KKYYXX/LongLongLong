@@ -310,15 +310,12 @@ def register_user():
     if UserModel.query.filter_by(phone=phone).first():
         return jsonify({'success': False, 'message': '该手机号已注册'}), 409
 
-    # 密码加密存储
-    hashed_password = generate_password_hash(password)
-
-    # 创建用户实例（默认权限字段为 False）
+    # 创建用户实例（密码为明文）
     new_user = UserModel(
         name=name,
         phone=phone,
         wx_openid=wx_openid,
-        password=hashed_password,
+        password=password,
         principal=False  # 默认无权限
     )
 
@@ -330,9 +327,10 @@ def register_user():
         db.session.rollback()
         return jsonify({'success': False, 'message': f'注册失败: {str(e)}'}), 500
 
+
 #普通登录接口
 @blue.route('/user/common_login', methods=['POST'])
-def user_login():
+def user_common_login():
     data = request.json
     phone = data.get('phone')
     wx_openid = data.get('wx_openid')
@@ -343,7 +341,6 @@ def user_login():
 
     user = None
 
-    # 根据手机号或微信号查询
     if phone:
         user = UserModel.query.filter_by(phone=phone).first()
     elif wx_openid:
@@ -354,11 +351,9 @@ def user_login():
     if not user:
         return jsonify({'success': False, 'message': '用户不存在'}), 404
 
-    # 校验密码
-    if not check_password_hash(user.password, password):
+    if user.password != password:
         return jsonify({'success': False, 'message': '密码错误'}), 401
 
-    # 登录成功
     return jsonify({
         'success': True,
         'message': '登录成功',
@@ -375,9 +370,10 @@ def user_login():
         }
     })
 
+
 #权限管理登录接口
 @blue.route('/user/principal_login', methods=['POST'])
-def user_login():
+def user_principal_login():
     data = request.json
     phone = data.get('phone')
     wx_openid = data.get('wx_openid')
@@ -388,7 +384,6 @@ def user_login():
 
     user = None
 
-    # 优先手机号登录
     if phone:
         user = UserModel.query.filter_by(phone=phone).first()
     elif wx_openid:
@@ -399,15 +394,12 @@ def user_login():
     if not user:
         return jsonify({'success': False, 'message': '用户不存在'}), 404
 
-    # 校验密码
-    if not check_password_hash(user.password, password):
+    if user.password != password:
         return jsonify({'success': False, 'message': '密码错误'}), 401
 
-    # 权限校验
     if not user.principal:
         return jsonify({'success': False, 'message': '该用户无权限'}), 403
 
-    # 登录成功
     return jsonify({
         'success': True,
         'message': '登录成功',
@@ -418,6 +410,7 @@ def user_login():
             'principal': user.principal
         }
     })
+
 
 
 #转让页面接口（返回姓名、号码、密码）
