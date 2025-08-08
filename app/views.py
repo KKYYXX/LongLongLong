@@ -1301,46 +1301,6 @@ def add_progress_record():
         }), 500
 
 
-# ==================== 微信上传文件接口 ====================
-@blue.route('/api/upload', methods=['POST'])
-def upload_file():
-    """
-    上传文件接口：接收文件本体，保存并返回文件URL
-    """
-    try:
-        file = request.files.get('file')
-        if not file:
-            return jsonify({'success': False, 'message': '未提供文件'}), 400
-
-        filename = secure_filename(file.filename)
-
-        # 确保 uploads 目录存在
-        upload_folder = os.path.join(os.getcwd(), 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
-
-        save_path = os.path.join(upload_folder, filename)
-        file.save(save_path)
-
-        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
-
-        return jsonify({'success': True, 'file_url': file_url}), 200
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
-
-# ==================== 文件访问接口 ====================
-@blue.route('/uploads/<filename>')
-def uploaded_file(filename):
-    """
-    文件访问接口：提供上传文件的访问
-    """
-    try:
-        upload_folder = os.path.join(os.getcwd(), 'uploads')
-        return send_from_directory(upload_folder, filename)
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'文件访问失败: {str(e)}'}), 404
-
-
 # ==================== newsModel 表接口 ====================
 
 # 1. 查询接口：根据model_name查询记录
@@ -1660,3 +1620,43 @@ def add_video_record():
         }), 500
 
 
+# ==================== 其他 ====================
+
+# ==================== 微信上传文件接口 ====================
+@blue.route('/api/upload', methods=['POST'])
+def upload_file():
+    """
+    上传文件接口：接收文件本体，保存并返回文件URL
+    """
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({'success': False, 'message': '未提供文件'}), 400
+
+        filename = secure_filename(file.filename)
+
+        # 确保 uploads 目录存在
+        upload_folder = os.path.join(os.getcwd(), 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        save_path = os.path.join(upload_folder, filename)
+        file.save(save_path)
+
+        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
+
+        return jsonify({'success': True, 'file_url': file_url}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
+
+# ==================== 文件访问接口 ====================
+@blue.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """
+    文件访问接口：提供上传文件的访问
+    """
+    try:
+        upload_folder = os.path.join(os.getcwd(), 'uploads')
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'文件访问失败: {str(e)}'}), 404
