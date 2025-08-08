@@ -63,20 +63,17 @@ class UserModel(db.Model):
 
 class UploadModel(db.Model):
     """
-    用户上传文件信息表模型
+    用户上传典型案例信息表模型
     """
     __tablename__ = 'model'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键ID')
-    #user_id = db.Column(db.String(128), nullable=False, comment='微信用户唯一标识openid')
     file_name = db.Column(db.String(255), nullable=False, comment='用户上传的原始文件名')
     file_type = db.Column(db.Enum('pdf', 'doc', 'docx'), nullable=False, comment='文件类型(pdf/word)')
     file_size = db.Column(db.Integer, nullable=False, comment='文件大小(单位：字节)')
     file_url = db.Column(db.String(512), nullable=False, comment='完整的文件访问URL地址')
-    has_text = db.Column(db.Boolean, nullable=False, default=True, comment='标记文件是否包含文字')
-    has_images = db.Column(db.Boolean, nullable=False, default=False, comment='标记文件是否包含图片')
-    video_url = db.Column(db.String(512), comment='关联视频文件URL（可选）')
     upload_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, comment='文件上传时间')
+    model_name = db.Column(db.String(512), nullable=False, comment='案例名称')
 
     def __repr__(self):
         return f'<UploadModel {self.id}: {self.file_name}>'
@@ -117,6 +114,37 @@ class ProgressModel(db.Model):
 
     def __repr__(self):
         return f'<ProgressModel {self.id}: {self.project_name}>'
+
+
+class newsModel(db.Model):
+    """
+    对应数据库中的 model_news 表
+    """
+
+    __tablename__ = 'model_news'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    model_name = db.Column(db.String(255), nullable=False, comment='案例名称')
+    news_url = db.Column(db.String(512), nullable=False, comment='新闻链接')
+    news_title = db.Column(db.String(255), nullable=False, comment='新闻名称')
+
+    def __repr__(self):
+        return f'<ModelNews id={self.id} model_name={self.model_name}>'
+
+class videoModel(db.Model):
+    """
+    对应数据库中的 model_video 表
+    """
+
+    __tablename__ = 'model_video'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    model_name = db.Column(db.String(255), nullable=False, comment='案例名称')
+    video_url = db.Column(db.String(512), nullable=False, comment='视频链接')
+
+
+    def __repr__(self):
+        return f'<VideoModel id={self.id} model_name={self.model_name}>'
 
 
 class TryModel(db.Model):

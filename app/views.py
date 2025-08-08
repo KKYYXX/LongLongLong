@@ -7,7 +7,7 @@ from app.plugins import db
 from sqlalchemy import func
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
-from app.models import TryModel, UserModel, ZCDocument
+from app.models import TryModel, UserModel, ZCDocument,newsModel
 
 from flask import request, jsonify, send_from_directory
 
@@ -213,15 +213,17 @@ def get_all_models():
         for m in models:
             result.append({
                 'id': m.id,
-                'user_id': m.user_id,
+                #'user_id': m.user_id,
                 'file_name': m.file_name,
                 'file_type': m.file_type,
                 'file_size': m.file_size,
                 'file_url': m.file_url,
-                'has_text': m.has_text,
-                'has_images': m.has_images,
-                'video_url': m.video_url,
+                'model_name':m.model_name,
+                #'has_text': m.has_text,
+                #'has_images': m.has_images,
+                #'video_url': m.video_url,
                 'upload_time': m.upload_time.strftime('%Y-%m-%d %H:%M:%S') if m.upload_time else None,
+
             })
         return jsonify({'success': True, 'data': result}), 200
     except Exception as e:
@@ -236,16 +238,17 @@ def add_model():
     try:
         from app.models import UploadModel, db
         data = request.json
-        user_id = data.get('user_id')
+        #user_id = data.get('user_id')
         file_name = data.get('file_name')
         file_type = data.get('file_type')
         file_size = data.get('file_size')
         file_url = data.get('file_url')
-        has_text = data.get('has_text', True)
-        has_images = data.get('has_images', False)
-        video_url = data.get('video_url')
+        model_name = data.get('model_name')
+        #has_text = data.get('has_text', True)
+        #has_images = data.get('has_images', False)
+        #video_url = data.get('video_url')
         # 校验必填
-        if not all([user_id, file_name, file_type, file_size, file_url]):
+        if not all([file_name, file_type, file_size, file_url]):
             return jsonify({'success': False, 'message': '缺少必要参数'}), 400
         # 校验类型
         if file_type not in ['pdf', 'doc', 'docx']:
@@ -257,14 +260,15 @@ def add_model():
         except Exception:
             return jsonify({'success': False, 'message': '文件大小必须为正整数'}), 400
         new_model = UploadModel(
-            user_id=user_id,
+            #user_id=user_id,
             file_name=file_name,
             file_type=file_type,
             file_size=file_size,
             file_url=file_url,
-            has_text=bool(has_text),
-            has_images=bool(has_images),
-            video_url=video_url,
+            model_name=model_name,
+            #has_text=bool(has_text),
+            #has_images=bool(has_images),
+            #video_url=video_url,
         )
         db.session.add(new_model)
         db.session.commit()
@@ -1335,3 +1339,324 @@ def uploaded_file(filename):
         return send_from_directory(upload_folder, filename)
     except Exception as e:
         return jsonify({'success': False, 'message': f'文件访问失败: {str(e)}'}), 404
+
+
+# ==================== newsModel 表接口 ====================
+
+# 1. 查询接口：根据model_name查询记录
+@blue.route('/api/news', methods=['GET'])
+def query_news_by_model_name():
+    """
+    根据model_name查询newsModel表中的相关记录
+    参数：model_name - 案例名称
+    """
+    try:
+        from app.models import newsModel
+        
+        model_name = request.args.get('model_name')
+        
+        if not model_name:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：model_name'
+            }), 400
+
+        # 查询指定model_name的所有记录
+        news_records = newsModel.query.filter_by(model_name=model_name).all()
+        
+        # 格式化返回结果
+        result = []
+        for record in news_records:
+            result.append({
+                'id': record.id,
+                'model_name': record.model_name,
+                'news_url': record.news_url,
+                'news_title': record.news_title
+            })
+
+        return jsonify({
+            'success': True,
+            'message': '查询成功',
+            'data': result,
+            'total_count': len(result)
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'查询失败: {str(e)}'
+        }), 500
+
+
+# 2. 删除接口：根据model_name删除记录
+@blue.route('/api/news', methods=['DELETE'])
+def delete_news_by_model_name():
+    """
+    根据model_name删除newsModel表中的所有相关记录
+    参数：model_name - 案例名称
+    """
+    try:
+        from app.models import newsModel
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        model_name = data.get('model_name')
+        
+        if not model_name:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：model_name'
+            }), 400
+
+        # 查找要删除的记录
+        news_records = newsModel.query.filter_by(model_name=model_name).all()
+        
+        if not news_records:
+            return jsonify({
+                'success': False,
+                'message': f'未找到model_name为"{model_name}"的记录'
+            }), 404
+
+        # 保存删除前的信息用于返回
+        deleted_count = len(news_records)
+        deleted_info = []
+        for record in news_records:
+            deleted_info.append({
+                'id': record.id,
+                'model_name': record.model_name,
+                'news_url': record.news_url,
+                'news_title': record.news_title
+            })
+
+        # 删除所有匹配的记录
+        for record in news_records:
+            db.session.delete(record)
+        
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'删除成功，共删除{deleted_count}条记录',
+            'deleted_records': deleted_info,
+            'deleted_count': deleted_count
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
+# 3. 添加接口：添加新的newsModel记录
+@blue.route('/api/news', methods=['POST'])
+def add_news_record():
+    """
+    添加新的newsModel记录
+    参数：model_name, news_url, news_title
+    """
+    try:
+        from app.models import newsModel
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        # 获取参数
+        model_name = data.get('model_name')
+        news_url = data.get('news_url')
+        news_title = data.get('news_title')
+
+        # 参数验证
+        if not all([model_name, news_url, news_title]):
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：model_name, news_url, news_title'
+            }), 400
+
+        # 创建新记录
+        new_record = newsModel(
+            model_name=model_name,
+            news_url=news_url,
+            news_title=news_title
+        )
+
+        # 添加到数据库
+        db.session.add(new_record)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '添加成功',
+            'data': {
+                'id': new_record.id,
+                'model_name': new_record.model_name,
+                'news_url': new_record.news_url,
+                'news_title': new_record.news_title
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'添加失败: {str(e)}'
+        }), 500
+
+
+# ==================== videoModel 表接口 ====================
+
+# 1. 查询接口：根据model_name查询记录
+@blue.route('/api/video', methods=['GET'])
+def query_video_by_model_name():
+    """
+    根据model_name查询videoModel表中的相关记录
+    参数：model_name - 案例名称
+    """
+    try:
+        from app.models import videoModel
+        
+        model_name = request.args.get('model_name')
+        
+        if not model_name:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：model_name'
+            }), 400
+
+        # 查询指定model_name的所有记录
+        video_records = videoModel.query.filter_by(model_name=model_name).all()
+        
+        # 格式化返回结果
+        result = []
+        for record in video_records:
+            result.append({
+                'id': record.id,
+                'model_name': record.model_name,
+                'video_url': record.video_url
+            })
+
+        return jsonify({
+            'success': True,
+            'message': '查询成功',
+            'data': result,
+            'total_count': len(result)
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'查询失败: {str(e)}'
+        }), 500
+
+
+# 2. 删除接口：根据model_name删除记录
+@blue.route('/api/video', methods=['DELETE'])
+def delete_video_by_model_name():
+    """
+    根据model_name删除videoModel表中的所有相关记录
+    参数：model_name - 案例名称
+    """
+    try:
+        from app.models import videoModel
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        model_name = data.get('model_name')
+        
+        if not model_name:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：model_name'
+            }), 400
+
+        # 查找要删除的记录
+        video_records = videoModel.query.filter_by(model_name=model_name).all()
+        
+        if not video_records:
+            return jsonify({
+                'success': False,
+                'message': f'未找到model_name为"{model_name}"的记录'
+            }), 404
+
+        # 保存删除前的信息用于返回
+        deleted_count = len(video_records)
+        deleted_info = []
+        for record in video_records:
+            deleted_info.append({
+                'id': record.id,
+                'model_name': record.model_name,
+                'video_url': record.video_url
+            })
+
+        # 删除所有匹配的记录
+        for record in video_records:
+            db.session.delete(record)
+        
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'删除成功，共删除{deleted_count}条记录',
+            'deleted_records': deleted_info,
+            'deleted_count': deleted_count
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
+# 3. 添加接口：添加新的videoModel记录
+@blue.route('/api/video', methods=['POST'])
+def add_video_record():
+    """
+    添加新的videoModel记录
+    参数：model_name, video_url
+    """
+    try:
+        from app.models import videoModel
+        
+        data = request.get_json() if request.is_json else request.form
+        
+        # 获取参数
+        model_name = data.get('model_name')
+        video_url = data.get('video_url')
+
+        # 参数验证
+        if not all([model_name, video_url]):
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：model_name, video_url'
+            }), 400
+
+        # 创建新记录
+        new_record = videoModel(
+            model_name=model_name,
+            video_url=video_url
+        )
+
+        # 添加到数据库
+        db.session.add(new_record)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '添加成功',
+            'data': {
+                'id': new_record.id,
+                'model_name': new_record.model_name,
+                'video_url': new_record.video_url
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'添加失败: {str(e)}'
+        }), 500
+
+
