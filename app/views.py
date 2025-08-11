@@ -954,6 +954,29 @@ def update_15project(project_id):
         return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
 
 
+# 5. 删除记录
+@blue.route('/api/15projects/<int:project_id>', methods=['DELETE'])
+def delete_15project(project_id):
+    """
+    删除指定的15projects表记录
+    参数：project_id - 要删除的记录ID
+    """
+    try:
+        from app.models import Projects15, db
+        project = Projects15.query.get(project_id)
+        if not project:
+            return jsonify({'success': False, 'message': f'记录ID {project_id} 不存在'}), 404
+
+        db.session.delete(project)
+        db.session.commit()
+        return jsonify({'success': True, 'message': '删除成功', 'deleted_id': project_id}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
+
+
+
 # ==================== progress表接口 ====================
 
 # 1. 查询接口：根据project_name查询所有记录的practice_time字段
