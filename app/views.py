@@ -976,6 +976,54 @@ def delete_15project(project_id):
         return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
 
 
+# 6. 通过项目名称查找项目ID
+@blue.route('/api/15projects/search', methods=['GET'])
+def search_project_by_name():
+    """
+    根据项目名称查找项目ID
+    参数：project_name - 项目名称
+    返回：项目ID和基本信息
+    """
+    try:
+        from app.models import Projects15
+
+        project_name = request.args.get('project_name')
+        if not project_name:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：project_name'
+            }), 400
+
+        # 在数据库中查找项目
+        project = Projects15.query.filter_by(project_name=project_name).first()
+
+        if not project:
+            return jsonify({
+                'success': False,
+                'message': f'未找到项目名称：{project_name}'
+            }), 404
+
+        # 返回项目信息（包含ID）
+        return jsonify({
+            'success': True,
+            'message': '查询成功',
+            'data': {
+                'id': project.id,
+                'project_name': project.project_name,
+                'project_type': project.project_type,
+                'start_date': project.start_date,
+                'end_date': project.end_date,
+                'background': project.background,
+                'objectives': project.objectives,
+                'remarks': project.remarks
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'查询失败: {str(e)}'
+        }), 500
 
 # ==================== progress表接口 ====================
 
