@@ -872,22 +872,54 @@ def get_all_project_names():
     except Exception as e:
         return jsonify({'success': False, 'message': f'查询失败: {str(e)}'}), 500
 
-# 2. 根据project_name查objectives
-@blue.route('/api/15projects/objectives', methods=['GET'])
-def get_objectives_by_project_name():
+
+# 2. 根据id查询Projects15的16项信息
+"""
+    根据id查询Projects15表的所有16项信息
+    前端传递参数id
     """
-    根据project_name查询objectives字段
-    前端传递参数project_name
+
+# 2. 根据id查询Projects15的16项信息
+"""
+    根据id查询Projects15表的所有16项信息
+    路径参数：project_id - 项目ID
+    """
+@blue.route('/api/15projects/detail/<int:project_id>', methods=['GET'])
+def get_project_detail_by_id(project_id):
+    """
+    根据id查询Projects15表的所有16项信息
+    路径参数：project_id - 项目ID
     """
     try:
         from app.models import Projects15
-        project_name = request.args.get('project_name')
-        if not project_name:
-            return jsonify({'success': False, 'message': '缺少project_name参数'}), 400
-        project = Projects15.query.filter_by(project_name=project_name).first()
+        # 直接使用路径参数中的project_id查询
+        project = Projects15.query.get(project_id)
         if not project:
-            return jsonify({'success': False, 'message': '未找到该项目'}), 404
-        return jsonify({'success': True, 'data': {'objectives': project.objectives}}), 200
+            return jsonify({'success': False, 'message': f'未找到id为{project_id}的项目'}), 404
+
+        # 返回所有16项信息
+        return jsonify({
+            'success': True,
+            'data': {
+                'id': project.id,
+                'serial_number': float(project.serial_number) if project.serial_number else None,
+                'city': project.city,
+                'county': project.county,
+                'universities': project.universities,
+                'project_name': project.project_name,
+                'implementing_institutions': project.implementing_institutions,
+                'is_key_project': project.is_key_project,
+                'involved_areas': project.involved_areas,
+                'project_type': project.project_type,
+                'start_date': project.start_date,
+                'end_date': project.end_date,
+                'background': project.background,
+                'content_and_measures': project.content_and_measures,
+                'objectives': project.objectives,
+                'contacts': project.contacts,
+                'remarks': project.remarks
+            }
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'message': f'查询失败: {str(e)}'}), 500
 
