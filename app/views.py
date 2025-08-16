@@ -1116,35 +1116,47 @@ def search_project_by_name():
 @blue.route('/api/progress/times', methods=['GET'])
 def get_progress_times():
     """
-    根据project_name查询所有记录的practice_time字段
-    参数：project_name - 项目名称
+    根据project_name获取项目进度时间列表
     """
     try:
         from app.models import ProgressModel
+
         project_name = request.args.get('project_name')
-        
+
         if not project_name:
             return jsonify({
-                'success': False, 
+                'success': False,
                 'message': '缺少必要参数：project_name'
             }), 400
 
-        # 查询指定项目的所有记录
-        progress_records = ProgressModel.query.filter_by(project_name=project_name).all()
-        
-        # 提取practice_time字段
-        times = []
-        for record in progress_records:
-            times.append({
-                'practice_time': record.practice_time.strftime('%Y-%m-%d %H:%M:%S') if record.practice_time else None
-            })
+        # 先检查表结构
+        try:
+            # 尝试查询，如果字段不存在会抛出异常
+            times = db.session.query(ProgressModel.practice_time).filter(
+                ProgressModel.project_name == project_name
+            ).distinct().all()
 
-        return jsonify({
-            'success': True,
-            'message': '查询成功',
-            'data': times,
-            'total_count': len(times)
-        }), 200
+            # 提取时间值
+            time_list = [str(t[0])[:10] for t in times if t[0]]  # 只取日期部分
+
+            return jsonify({
+                'success': True,
+                'data': time_list
+            }), 200
+
+        except Exception as db_error:
+            # 数据库字段错误，返回具体错误信息
+            error_msg = str(db_error)
+            if "Unknown column" in error_msg:
+                return jsonify({
+                    'success': False,
+                    'message': '数据库表结构错误：缺少必要字段，请联系管理员检查数据库'
+                }), 500
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'数据库查询错误：{error_msg}'
+                }), 500
 
     except Exception as e:
         return jsonify({
@@ -1157,20 +1169,21 @@ def get_progress_times():
 @blue.route('/api/progress/detail', methods=['GET'])
 def get_progress_detail():
     """
-    根据project_name和practice_time查询记录的详细信息
+    根据project_name和practice_time查询进度记录的详细信息
     参数：project_name - 项目名称
-    参数：practice_time - 实践时间（格式：YYYY-MM-DD HH:MM:SS）
+    参数：practice_time - 实践时间（格式：YYYY-MM-DD）
     """
     try:
         from app.models import ProgressModel
         from datetime import datetime
-        
+        from sqlalchemy import func
+
         project_name = request.args.get('project_name')
         practice_time_str = request.args.get('practice_time')
-        
+
         if not project_name or not practice_time_str:
             return jsonify({
-                'success': False, 
+                'success': False,
                 'message': '缺少必要参数：project_name 或 practice_time'
             }), 400
 
@@ -1183,33 +1196,46 @@ def get_progress_detail():
                 'message': '时间格式错误，请使用 YYYY-MM-DD 格式'
             }), 400
 
-        # 查询指定记录
-        record = ProgressModel.query.filter_by(
-            project_name=project_name,
-            practice_time=practice_time
-        ).first()
+        # 使用DATE()函数提取日期部分进行比较，只查询存在的字段
+        records = ProgressModel.query.with_entities(
+            ProgressModel.id,
+            ProgressModel.project_name,
+            ProgressModel.practice_time,
+            ProgressModel.practice_location,
+            ProgressModel.practice_members,
+            ProgressModel.news
+            #ProgressModel.practice_image_url,
+            #ProgressModel.practice_video_url,
+        ).filter(
+            ProgressModel.project_name == project_name,
+            func.date(ProgressModel.practice_time) == practice_time.date()
+        ).order_by(ProgressModel.practice_time.desc()).all()
 
-        if not record:
+        if not records:
             return jsonify({
                 'success': False,
-                'message': '未找到对应的记录'
+                'message': '该时间点未找到对应的记录'
             }), 404
 
-        # 返回详细信息
-        detail = {
-            'project_name': record.project_name,
-            'practice_time': record.practice_time.strftime('%Y-%m-%d ') if record.practice_time else None,
-            'practice_location': record.practice_location,
-            'practice_members': record.practice_members,
-            'practice_image_url': record.practice_image_url,
-            'practice_video_url': record.practice_video_url,
-            'news': record.news
-        }
+        # 返回多条记录的详细信息
+        details = []
+        for record in records:
+            detail = {
+                'id': record.id,
+                'project_name': record.project_name,
+                'practice_time': record.practice_time.strftime('%Y-%m-%d') if record.practice_time else None,
+                'practice_location': record.practice_location,
+                'practice_members': record.practice_members,
+                'news': record.news
+                #'practice_image_url': record.practice_image_url,
+                #'video_url': record.video_url
+            }
+            details.append(detail)
 
         return jsonify({
             'success': True,
             'message': '查询成功',
-            'data': detail
+            'data': details
         }), 200
 
     except Exception as e:
