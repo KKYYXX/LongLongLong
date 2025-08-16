@@ -213,15 +213,11 @@ def get_all_models():
         for m in models:
             result.append({
                 'id': m.id,
-                #'user_id': m.user_id,
                 'file_name': m.file_name,
                 'file_type': m.file_type,
                 'file_size': m.file_size,
                 'file_url': m.file_url,
                 'model_name':m.model_name,
-                #'has_text': m.has_text,
-                #'has_images': m.has_images,
-                #'video_url': m.video_url,
                 'upload_time': m.upload_time.strftime('%Y-%m-%d %H:%M:%S') if m.upload_time else None,
 
             })
