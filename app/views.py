@@ -868,22 +868,54 @@ def get_all_project_names():
     except Exception as e:
         return jsonify({'success': False, 'message': f'查询失败: {str(e)}'}), 500
 
-# 2. 根据project_name查objectives
-@blue.route('/api/15projects/objectives', methods=['GET'])
-def get_objectives_by_project_name():
+
+# 2. 根据id查询Projects15的16项信息
+"""
+    根据id查询Projects15表的所有16项信息
+    前端传递参数id
     """
-    根据project_name查询objectives字段
-    前端传递参数project_name
+
+# 2. 根据id查询Projects15的16项信息
+"""
+    根据id查询Projects15表的所有16项信息
+    路径参数：project_id - 项目ID
+    """
+@blue.route('/api/15projects/detail/<int:project_id>', methods=['GET'])
+def get_project_detail_by_id(project_id):
+    """
+    根据id查询Projects15表的所有16项信息
+    路径参数：project_id - 项目ID
     """
     try:
         from app.models import Projects15
-        project_name = request.args.get('project_name')
-        if not project_name:
-            return jsonify({'success': False, 'message': '缺少project_name参数'}), 400
-        project = Projects15.query.filter_by(project_name=project_name).first()
+        # 直接使用路径参数中的project_id查询
+        project = Projects15.query.get(project_id)
         if not project:
-            return jsonify({'success': False, 'message': '未找到该项目'}), 404
-        return jsonify({'success': True, 'data': {'objectives': project.objectives}}), 200
+            return jsonify({'success': False, 'message': f'未找到id为{project_id}的项目'}), 404
+
+        # 返回所有16项信息
+        return jsonify({
+            'success': True,
+            'data': {
+                'id': project.id,
+                'serial_number': float(project.serial_number) if project.serial_number else None,
+                'city': project.city,
+                'county': project.county,
+                'universities': project.universities,
+                'project_name': project.project_name,
+                'implementing_institutions': project.implementing_institutions,
+                'is_key_project': project.is_key_project,
+                'involved_areas': project.involved_areas,
+                'project_type': project.project_type,
+                'start_date': project.start_date,
+                'end_date': project.end_date,
+                'background': project.background,
+                'content_and_measures': project.content_and_measures,
+                'objectives': project.objectives,
+                'contacts': project.contacts,
+                'remarks': project.remarks
+            }
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'message': f'查询失败: {str(e)}'}), 500
 
@@ -935,19 +967,78 @@ def update_15project(project_id):
     """
     try:
         from app.models import Projects15, db
+
         data = request.json
+        field_name = data.get('field_name')  # 要修改的字段名
+        new_value = data.get('new_value')  # 新值
+
+        if not field_name:
+            return jsonify({'success': False, 'message': '缺少字段名'}), 400
+
+        if new_value is None:
+            return jsonify({'success': False, 'message': '缺少新值'}), 400
+
+        # 查找项目
         project = Projects15.query.get(project_id)
         if not project:
             return jsonify({'success': False, 'message': '未找到该项目'}), 404
-        # 只更新前端传递的字段
-        for key, value in data.items():
-            if hasattr(project, key):
-                setattr(project, key, value)
+
+        # 字段映射：前端字段名 -> 数据库列名
+        field_mapping = {
+            'serialNumber': 'serial_number',
+            'cityLevel': 'city',
+            'pairedCounty': 'county',
+            'pairedInstitution': 'universities',
+            'projectName': 'project_name',
+            'implementationUnit': 'implementing_institutions',
+            'isKeyProject': 'is_key_project',
+            'involvedAreas': 'involved_areas',
+            'projectType': 'project_type',
+            'startDate': 'start_date',
+            'endDate': 'end_date',
+            'background': 'background',
+            'content': 'content_and_measures',
+            'objectives': 'objectives',
+            'contacts': 'contacts',
+            'remarks': 'remarks'
+        }
+
+        # 获取数据库字段名
+        db_field_name = field_mapping.get(field_name, field_name)
+
+        # 检查字段是否存在
+        if not hasattr(project, db_field_name):
+            return jsonify({
+                'success': False,
+                'message': f'字段 {field_name} 不存在或无法修改'
+            }), 400
+
+        # 获取旧值
+        old_value = getattr(project, db_field_name)
+
+        # 更新字段值
+        setattr(project, db_field_name, new_value)
+
+        # 提交到数据库
         db.session.commit()
-        return jsonify({'success': True, 'message': '修改成功'}), 200
+
+        return jsonify({
+            'success': True,
+            'message': '修改成功',
+            'data': {
+                'field_name': field_name,
+                'old_value': old_value,
+                'new_value': new_value
+            }
+        }), 200
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
+        print(f"修改项目失败: {str(e)}")  # 添加日志
+        return jsonify({
+            'success': False,
+            'message': f'修改失败: {str(e)}'
+        }), 500
 
 
 # 5. 删除记录
