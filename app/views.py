@@ -1217,6 +1217,7 @@ def get_progress_detail():
                 'message': '该时间点未找到对应的记录'
             }), 404
 
+
         # 返回多条记录的详细信息
         details = []
         for record in records:
@@ -1231,6 +1232,7 @@ def get_progress_detail():
                 #'video_url': record.video_url
             }
             details.append(detail)
+
 
         return jsonify({
             'success': True,
@@ -1365,8 +1367,8 @@ def update_progress_record():
             record.practice_members = data['practice_members']
         if 'practice_image_url' in data:
             record.practice_image_url = data['practice_image_url']
-        if 'practice_video_url' in data:
-            record.practice_image_url = data['practice_video_url']
+        if 'video_url' in data:
+            record.practice_image_url = data['video_url']
         if 'news' in data:
             record.news = data['news']
 
@@ -1382,7 +1384,7 @@ def update_progress_record():
                 'practice_members': record.practice_members,
                 'practice_image_url': record.practice_image_url,
                 'news': record.news,
-                'practice_video_url': record.practice_video_url
+                'video_url': record.video_url
             }
         }), 200
 
@@ -1407,6 +1409,7 @@ def add_progress_record():
         from datetime import datetime
         
         data = request.get_json() if request.is_json else request.form
+
         
         # 获取必要参数
         project_name = data.get('project_name')
@@ -1415,7 +1418,7 @@ def add_progress_record():
         practice_members = data.get('practice_members')
         news = data.get('news')
         practice_image_url = data.get('practice_image_url')
-        practice_video_url = data.get('practice_video_url')
+        video_url = data.get('video_url')
 
         # 参数验证
         if not all([project_name, practice_time_str, practice_location, practice_members, news]):
@@ -1461,7 +1464,7 @@ def add_progress_record():
             practice_members=practice_members,
             practice_image_url=practice_image_url,
             news=news,
-            practice_video_url = practice_video_url
+            video_url = video_url
         )
 
         # 添加到数据库
@@ -1478,7 +1481,7 @@ def add_progress_record():
                 'practice_members': new_record.practice_members,
                 'practice_image_url': new_record.practice_image_url,
                 'news': new_record.news,
-                'practice_video_url': new_record.practice_video_url
+                'video_url': new_record.video_url
 
             }
         }), 201
