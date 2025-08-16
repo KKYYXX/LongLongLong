@@ -109,7 +109,7 @@ class ProgressModel(db.Model):
     practice_members = db.Column(db.Text, nullable=False, comment='实践成员，多个成员用换行或逗号分隔')
     practice_image_url = db.Column(db.String(512), comment='实践图片的URL地址，用于存储图片的链接')
     news = db.Column(db.String(512), nullable=False, comment='用户上传的新闻链接')
-    practice_video_url = db.Column(db.String(512), comment='用户上传的视频url')
+    video_url = db.Column(db.String(512), comment='用户上传的视频url')
 
     project = db.relationship('Projects15', backref='progress', foreign_keys=[project_name])
 
