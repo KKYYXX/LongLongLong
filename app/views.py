@@ -2,16 +2,14 @@
 import os
 from flask import Blueprint,request,jsonify,render_template
 from werkzeug.utils import secure_filename
-from app.models import TryModel,ZCDocument
+from app.models import ZCDocument
 from app.plugins import db
 from sqlalchemy import func
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
-from app.models import TryModel, UserModel, ZCDocument,newsModel
+from app.models import UserModel, ZCDocument,newsModel
 
 from flask import request, jsonify, send_from_directory
-
-
 
 
 blue = Blueprint('blue',__name__)
@@ -1204,6 +1202,7 @@ def get_progress_detail():
             'practice_location': record.practice_location,
             'practice_members': record.practice_members,
             'practice_image_url': record.practice_image_url,
+            'practice_video_url': record.practice_video_url,
             'news': record.news
         }
 
@@ -1340,6 +1339,8 @@ def update_progress_record():
             record.practice_members = data['practice_members']
         if 'practice_image_url' in data:
             record.practice_image_url = data['practice_image_url']
+        if 'practice_video_url' in data:
+            record.practice_image_url = data['practice_video_url']
         if 'news' in data:
             record.news = data['news']
 
@@ -1354,7 +1355,8 @@ def update_progress_record():
                 'practice_location': record.practice_location,
                 'practice_members': record.practice_members,
                 'practice_image_url': record.practice_image_url,
-                'news': record.news
+                'news': record.news,
+                'practice_video_url': record.practice_video_url
             }
         }), 200
 
@@ -1387,6 +1389,7 @@ def add_progress_record():
         practice_members = data.get('practice_members')
         news = data.get('news')
         practice_image_url = data.get('practice_image_url')
+        practice_video_url = data.get('practice_video_url')
 
         # 参数验证
         if not all([project_name, practice_time_str, practice_location, practice_members, news]):
@@ -1431,7 +1434,8 @@ def add_progress_record():
             practice_location=practice_location,
             practice_members=practice_members,
             practice_image_url=practice_image_url,
-            news=news
+            news=news,
+            practice_video_url = practice_video_url
         )
 
         # 添加到数据库
@@ -1447,7 +1451,9 @@ def add_progress_record():
                 'practice_location': new_record.practice_location,
                 'practice_members': new_record.practice_members,
                 'practice_image_url': new_record.practice_image_url,
-                'news': new_record.news
+                'news': new_record.news,
+                'practice_video_url': new_record.practice_video_url
+
             }
         }), 201
 
