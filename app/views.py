@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import UserModel, ZCDocument,newsModel
 
 from flask import request, jsonify, send_from_directory
+from config import get_upload_url
 
 
 blue = Blueprint('blue',__name__)
@@ -1807,7 +1808,7 @@ def upload_file():
         save_path = os.path.join(upload_folder, filename)
         file.save(save_path)
 
-        file_url = f"http://127.0.0.1:5000/uploads/{filename}"
+        file_url = get_upload_url(filename)
 
         return jsonify({'success': True, 'file_url': file_url}), 200
 
