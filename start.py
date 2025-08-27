@@ -14,7 +14,7 @@ app = createApp()
 
 if __name__ == '__main__':
     print("🚀 启动微信小程序后端服务...")
-    print("📍 服务地址: http://0.0.0.0:90")
+    print("📍 服务地址: http://0.0.0.0:5000")
     print("🔗 API前缀: /app")
     print("📁 上传目录: uploads/")
     print("=" * 50)
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # 生产环境配置
     app.run(
         host='0.0.0.0', 
-        port=5000, 
+        port=5000,
         debug=False,
         threaded=True
     )

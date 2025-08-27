@@ -16,13 +16,13 @@ class DevelopmentConfig(Config):
     """开发环境配置"""
     DEBUG = True
     # 同一台服务器使用本地连接
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://app_user:Xjy20050109!@175.178.197.202:3306/longmen'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://app_user:Xjy20050109!@localhost:3306/longmen'
 
 class ProductionConfig(Config):
     """生产环境配置"""
     DEBUG = False
     # 同一台服务器使用本地连接
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://app_user:Xjy20050109!@175.178.197.202:3306/longmen'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://app_user:Xjy20050109!@localhost:3306/longmen'
     
     # 生产环境安全配置
     SESSION_COOKIE_SECURE = True
