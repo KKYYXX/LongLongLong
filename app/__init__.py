@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv() # 这行代码负责读取 .env 文件
+
 from flask import Flask
 from app.plugins import initPlugins
 from app.views import blue
