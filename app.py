@@ -16,4 +16,4 @@ def uploaded_file(filename):
 
 if __name__ == '__main__':
     # 生产环境配置
-    app.run(debug=False, host='0.0.0.0', port=80)
+    app.run(debug=False, host='0.0.0.0', port=5000)

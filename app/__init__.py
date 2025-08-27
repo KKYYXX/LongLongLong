@@ -11,7 +11,7 @@ def createApp():
     app = Flask(__name__)
     
     # 根据环境变量选择配置
-    env = os.environ.get('FLASK_ENV', 'production')
+    env = os.environ.get('FLASK_ENV', 'development')
     if env == 'development':
         app.config.from_object('config.DevelopmentConfig')
     else:
