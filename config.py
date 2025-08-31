@@ -16,7 +16,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     # 同一台服务器使用本地连接
     # 从环境变量读取，如果不存在则使用后面的默认值（仅用于开发测试）
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'mysql+pymysql://app_user:Xjy20050109@localhost:3306/longmen'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'mysql+pymysql://app_user:Xjy20050109!@localhost:3306/longmen'
 
 class ProductionConfig(Config):
     DEBUG = False
