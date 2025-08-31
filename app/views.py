@@ -1807,21 +1807,12 @@ def upload_file():
         save_path = os.path.join(upload_folder, filename)
         file.save(save_path)
 
-        file_url = f"http://127.0.0.1:80/uploads/{filename}"
+        # 返回公网可访问的URL，确保小程序可以访问
+        file_url = f"http://175.178.197.202:80/uploads/{filename}"
 
         return jsonify({'success': True, 'file_url': file_url}), 200
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'上传失败: {str(e)}'}), 500
 
-# ==================== 文件访问接口 ====================
-@blue.route('/uploads/<filename>')
-def uploaded_file(filename):
-    """
-    文件访问接口：提供上传文件的访问
-    """
-    try:
-        upload_folder = os.path.join(os.getcwd(), 'uploads')
-        return send_from_directory(upload_folder, filename)
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'文件访问失败: {str(e)}'}), 404
+
