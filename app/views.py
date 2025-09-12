@@ -7,7 +7,7 @@ from app.plugins import db
 from sqlalchemy import func
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
-from app.models import UserModel, ZCDocument,newsModel
+from app.models import UserModel, ZCDocument,newsModel,Projects15
 
 from flask import request, jsonify, send_from_directory
 
@@ -1109,6 +1109,39 @@ def search_project_by_name():
             'success': False,
             'message': f'查询失败: {str(e)}'
         }), 500
+
+
+# 7. 统计与gdufe结对的项目数量
+@blue.route('/api/count/gdufe', methods=['GET'])
+def count_gdufe_projects():
+    """
+    统计与广东财经大学结对的项目数量
+
+    Returns:
+        JSON: 包含统计结果的字典，格式为{"count": 数量}
+    """
+    try:
+        count = Projects15.query.filter(Projects15.gdufe == True).count()
+        return jsonify({"count": count}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# 8. 统计与gdpic结对的项目数量
+@blue.route('/api/count/gdpic', methods=['GET'])
+def count_gdpic_projects():
+    """
+    统计与广东工贸职业技术学院结对的项目数量
+
+    Returns:
+        JSON: 包含统计结果的字典，格式为{"count": 数量}
+    """
+    try:
+        count = Projects15.query.filter(Projects15.gdpic == True).count()
+        return jsonify({"count": count}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # ==================== progress表接口 ====================
 

@@ -35,6 +35,8 @@ class Projects15(db.Model):
     objectives = db.Column(db.Text, comment='主要任务目标(量化指标)')
     contacts = db.Column(db.Text, comment='联系人(职务)和联系方式')
     remarks = db.Column(db.Text, comment='备注')
+    gdufe = db.Column(db.Boolean, default=False,comment='是否和广东财经大学结对')
+    gdpic = db.Column(db.Boolean, default=False,comment='是否和广东工贸职业技术学院结对')
 
     def __repr__(self):
         return f'<Project15 {self.id}: {self.project_name}>'
