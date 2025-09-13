@@ -1121,9 +1121,16 @@ def count_gdufe_projects():
         JSON: 包含统计结果的字典，格式为{"count": 数量}
     """
     try:
-        count = Projects15.query.filter_by(gdufe=True).count()
+        # 添加调试信息
+        total_count = Projects15.query.count()
+        print(f"总记录数: {total_count}")
+        
+        count = Projects15.query.filter(Projects15.gdufe == 1).count()
+        print(f"gdufe=True的记录数: {count}")
+        
         return jsonify({"count": count}), 200
     except Exception as e:
+        print(f"错误详情: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -1137,9 +1144,16 @@ def count_gdpic_projects():
         JSON: 包含统计结果的字典，格式为{"count": 数量}
     """
     try:
-        count = Projects15.query.filter_by(gdpic=True).count()
+        # 添加调试信息
+        total_count = Projects15.query.count()
+        print(f"总记录数: {total_count}")
+        
+        count = Projects15.query.filter(Projects15.gdpic == 1).count()
+        print(f"gdpic=True的记录数: {count}")
+        
         return jsonify({"count": count}), 200
     except Exception as e:
+        print(f"错误详情: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
