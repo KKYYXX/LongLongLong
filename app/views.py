@@ -1121,7 +1121,7 @@ def count_gdufe_projects():
         JSON: 包含统计结果的字典，格式为{"count": 数量}
     """
     try:
-        count = Projects15.query.filter(Projects15.gdufe == True).count()
+        count = Projects15.query.filter_by(gdufe=True).count()
         return jsonify({"count": count}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1137,7 +1137,7 @@ def count_gdpic_projects():
         JSON: 包含统计结果的字典，格式为{"count": 数量}
     """
     try:
-        count = Projects15.query.filter(Projects15.gdpic == True).count()
+        count = Projects15.query.filter_by(gdpic=True).count()
         return jsonify({"count": count}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
